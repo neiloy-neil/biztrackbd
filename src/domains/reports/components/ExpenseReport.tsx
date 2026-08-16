@@ -57,7 +57,7 @@ export default function ExpenseReport({ dateRange, exportTrigger }: { dateRange:
                   outerRadius={80}
                   dataKey="total"
                   nameKey="category"
-                  label={({ name, percent }: { name: string; percent?: number }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 >
                   {data.expense_by_category.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -81,7 +81,7 @@ export default function ExpenseReport({ dateRange, exportTrigger }: { dateRange:
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), 'MMM dd')} stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={12} />
-                <RechartsTooltip formatter={(value) => [`৳${value}`, 'Expense']} labelFormatter={(label: string) => format(new Date(label), 'MMM dd, yyyy')} />
+                <RechartsTooltip formatter={(value) => [`৳${value}`, 'Expense']} labelFormatter={(label) => format(new Date(String(label)), 'MMM dd, yyyy')} />
                 <Bar dataKey="total" fill="#f43f5e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

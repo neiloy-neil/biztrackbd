@@ -1,0 +1,60 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { LogOut, Settings as SettingsIcon, Store, CreditCard } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
+
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  return (
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 bg-slate-50 min-h-screen">
+      <div className="flex items-center gap-2">
+        <SettingsIcon className="w-6 h-6 text-slate-700" />
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">সেটিংস (Settings)</h2>
+      </div>
+
+      <div className="space-y-4 max-w-lg">
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Store className="w-5 h-5 text-slate-500" /> ব্যবসা (Business)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 flex flex-col">
+            <p className="text-sm text-slate-600 mb-2">আপনি বর্তমানে একটি ডেমো/সক্রিয় ব্যবসায় আছেন।</p>
+            <Link href="/closing" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>হিসাব ক্লোজিং (Day Close)</Link>
+            <Link href="/settings/profile" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>প্রোফাইল আপডেট</Link>
+            <Link href="/settings/staff" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>স্টাফ ম্যানেজমেন্ট</Link>
+            <Link href="/reports" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>রিপোর্টস (Reports)</Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-slate-500" /> পেমেন্ট ও সাবস্ক্রিপশন
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button variant="outline" className="w-full justify-start">সাবস্ক্রিপশন প্ল্যান</Button>
+            <Button variant="outline" className="w-full justify-start">এসএমএস রেট (SMS Rate)</Button>
+          </CardContent>
+        </Card>
+
+        <form action="/api/auth/signout" method="POST">
+          <Button type="submit" variant="destructive" className="w-full">
+            <LogOut className="mr-2 h-4 w-4" /> লগ আউট (Log Out)
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}

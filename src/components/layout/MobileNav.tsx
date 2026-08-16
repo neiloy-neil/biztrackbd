@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AppLink as Link, useNormalizedPathname } from '@/components/AppLink'
 import { usePathname } from 'next/navigation'
 import { Home, Users, Package, Menu, Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose, DrawerFooter } from '@/components/ui/drawer'
@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 
 export function MobileNav() {
-  const pathname = usePathname()
+  const normalizedPathname = useNormalizedPathname()
+  const truePathname = usePathname() || ''
   const [open, setOpen] = useState(false)
 
-  if (pathname === '/login' || pathname === '/pos') return null // Don't show on login/pos page
+  if (normalizedPathname === '/login' || normalizedPathname === '/pos' || truePathname.startsWith('/admin')) return null // Don't show on login/pos or admin pages
 
   return (
     <>
@@ -20,14 +21,14 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t bg-background px-2 pb-safe md:hidden">
         <Link
           href="/dashboard"
-          className={`flex flex-col items-center justify-center space-y-1 ${pathname === '/dashboard' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPathname === '/dashboard' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Home className="h-5 w-5" />
           <span className="text-[10px] font-medium">ড্যাশবোর্ড</span>
         </Link>
         <Link
           href="/parties"
-          className={`flex flex-col items-center justify-center space-y-1 ${pathname === '/parties' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPathname === '/parties' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Users className="h-5 w-5" />
           <span className="text-[10px] font-medium">পার্টি</span>
@@ -75,14 +76,14 @@ export function MobileNav() {
 
         <Link
           href="/inventory"
-          className={`flex flex-col items-center justify-center space-y-1 ${pathname === '/inventory' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPathname === '/inventory' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Package className="h-5 w-5" />
           <span className="text-[10px] font-medium">ইনভেন্টরি</span>
         </Link>
         <Link
           href="/settings"
-          className={`flex flex-col items-center justify-center space-y-1 ${pathname === '/settings' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPathname === '/settings' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Menu className="h-5 w-5" />
           <span className="text-[10px] font-medium">মেনু</span>

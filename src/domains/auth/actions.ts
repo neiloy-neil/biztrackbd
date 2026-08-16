@@ -9,7 +9,6 @@ const SMS_API_KEY = process.env.SMS_NET_BD_API_KEY || process.env.NEXT_PUBLIC_SM
 const SMS_ENDPOINT = 'https://api.sms.net.bd/sendsms'
 
 function normalizePhone(phone: string): string {
-  // Strip spaces/dashes, ensure format is 8801XXXXXXXXX
   const digits = phone.replace(/\D/g, '')
   if (digits.startsWith('880')) return digits
   if (digits.startsWith('0')) return `880${digits.slice(1)}`
@@ -20,15 +19,103 @@ function deriveEmail(phone: string): string {
   return `${normalizePhone(phone)}@biztrack.internal`
 }
 
-function derivePassword(phone: string): string {
-  // Deterministic password from phone + a server-side secret
-  const secret = process.env.AUTH_INTERNAL_SECRET || 'biztrack-internal-secret-2024'
-  return `${normalizePhone(phone)}-${secret}`
+import { headers } from 'next/headers'
+
+// Determines where the user should go based on their business membership
+async function getRedirectPath(userId: string): Promise<string> {
+  const headersList = await headers()
+  const referer = headersList.get('referer') || ''
+  const host = headersList.get('host') || ''
+  
+  // Check if we are on pure localhost without subdomains
+  const isLocalhost = host.includes('localhost') && !host.includes('app.localhost') && !host.includes('admin.localhost')
+
+  const supabase = await createClient()
+
+  // Check if they are a platform admin
+  const { data: adminData } = await supabase
+    .from('platform_admins')
+    .select('role')
+    .eq('user_id', userId)
+    .single()
+
+  // If Admin logging in via the admin portal
+  if (adminData && referer.includes('/admin')) {
+    return isLocalhost ? '/admin/dashboard' : '/dashboard'
+  }
+
+  // Not an admin, or Admin logging in via normal app portal -> go to app
+  const appPrefix = isLocalhost ? '/app' : ''
+  
+  const { data: member } = await supabase
+    .from('business_members')
+    .select('business_id')
+    .eq('user_id', userId)
+    .limit(1)
+    .single()
+    
+  if (member) {
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    cookieStore.set('active_business_id', member.business_id, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30 // 30 days
+    })
+    return `${appPrefix}/dashboard`
+  }
+  return `${appPrefix}/onboarding`
+}
+
+export async function checkUserExists(phone: string) {
+  const normalizedPhone = normalizePhone(phone)
+  const email = deriveEmail(normalizedPhone)
+
+  const adminClient = await createAdminClient()
+  
+  // Quick hack: Try to create the user, if email exists it fails
+  const { data, error } = await adminClient.auth.admin.createUser({
+    email,
+    password: 'TemporaryPassword123!',
+    email_confirm: true,
+  })
+
+  if (data?.user) {
+    // Clean up if it actually succeeded (meaning user didn't exist)
+    await adminClient.auth.admin.deleteUser(data.user.id)
+    return { exists: false }
+  }
+
+  if (error?.message.includes('already registered') || error?.code === 'user_already_exists') {
+    return { exists: true }
+  }
+
+  // Fallback to true if we hit a weird error to be safe
+  return { exists: true }
+}
+
+export async function loginWithPin(phone: string, pin: string) {
+  const isRateLimited = await rateLimit('loginWithPin')
+  if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
+
+  const normalizedPhone = normalizePhone(phone)
+  const email = deriveEmail(normalizedPhone)
+  
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: pin
+  })
+
+  if (error || !data.user) {
+    return { success: false, error: 'ভুল পিন। আবার চেষ্টা করুন। (Invalid PIN)' }
+  }
+
+  const redirectTo = await getRedirectPath(data.user.id)
+  return { success: true, redirectTo }
 }
 
 async function sendSms(phone: string, otp: string): Promise<{ success: boolean; error?: string }> {
   if (!SMS_API_KEY) {
-    // In development/testing, just log the OTP
     console.log(`[DEV MODE] OTP for ${phone}: ${otp}`)
     return { success: true }
   }
@@ -60,11 +147,8 @@ export async function sendOtp(phone: string) {
   if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
 
   const normalizedPhone = normalizePhone(phone)
-  
-  // Generate 6-digit OTP
   const otp = String(Math.floor(100000 + Math.random() * 900000))
 
-  // Use admin client to bypass RLS (user is not authenticated yet)
   const adminClient = await createAdminClient()
   const { error: dbError } = await adminClient
     .from('phone_otps')
@@ -75,7 +159,6 @@ export async function sendOtp(phone: string) {
     return { success: false, error: 'Failed to generate OTP. Please try again.' }
   }
 
-  // Send SMS
   const smsResult = await sendSms(normalizedPhone, otp)
   if (!smsResult.success) {
     return { success: false, error: smsResult.error || 'Failed to send SMS' }
@@ -84,15 +167,18 @@ export async function sendOtp(phone: string) {
   return { success: true, phone: normalizedPhone }
 }
 
-export async function verifyOtp(phone: string, token: string) {
+export async function verifyOtpAndCreateUser(phone: string, token: string, pin: string) {
   const isRateLimited = await rateLimit('verifyOtp')
   if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
 
+  if (!pin || pin.length < 6) {
+    return { success: false, error: 'আপনার পিন কমপক্ষে ৬ সংখ্যার হতে হবে।' }
+  }
+
   const normalizedPhone = normalizePhone(phone)
-  // Use admin client - user is not authenticated yet
   const adminClient = await createAdminClient()
 
-  // Find the most recent unverified OTP for this phone
+  // Find unverified OTP
   const { data: otpRecord, error: fetchError } = await adminClient
     .from('phone_otps')
     .select('*')
@@ -127,63 +213,36 @@ export async function verifyOtp(phone: string, token: string) {
     .update({ verified_at: new Date().toISOString() })
     .eq('id', otpRecord.id)
 
-  // Now sign user in (or create account) using derived credentials
+  // Create account with PIN
   const email = deriveEmail(normalizedPhone)
-  const password = derivePassword(normalizedPhone)
+  
+  const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+    email,
+    password: pin,
+    email_confirm: true,
+    user_metadata: { phone: normalizedPhone }
+  })
+
+  if (createError || !newUser) {
+    return { success: false, error: 'Account creation failed: ' + createError?.message }
+  }
+
+  // Sign in with the newly created account
   const supabase = await createClient()
-
-  // Check if user has a business to determine where to redirect
-  async function getRedirectPath(userId: string): Promise<string> {
-    const { data: member } = await supabase
-      .from('business_members')
-      .select('business_id')
-      .eq('user_id', userId)
-      .limit(1)
-      .single()
-      
-    if (member) {
-      const { cookies } = await import('next/headers')
-      const cookieStore = await cookies()
-      cookieStore.set('active_business_id', member.business_id, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30 // 30 days
-      })
-      return '/dashboard'
-    }
-    return '/onboarding'
+  const { error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password: pin })
+  
+  if (finalSignInError) {
+    return { success: false, error: finalSignInError.message }
   }
-
-  // Try to sign in first
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (signInData?.user) {
-    const redirectTo = await getRedirectPath(signInData.user.id)
-    return { success: true, redirectTo }
-  }
-
-  // If sign in failed (user doesn't exist), create the account
-  if (signInError) {
-    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { phone: normalizedPhone }
-    })
-
-    if (createError || !newUser) {
-      return { success: false, error: 'Account creation failed: ' + createError?.message }
-    }
-
-    // Now sign in with the newly created account
-    const { data: finalData, error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (finalSignInError) {
-      return { success: false, error: finalSignInError.message }
-    }
-    // Brand new user - always goes to onboarding
-    return { success: true, redirectTo: '/onboarding' }
-  }
-
-  return { success: true, redirectTo: '/dashboard' }
+  
+  const headersList = await headers()
+  const host = headersList.get('host') || ''
+  const isLocalhost = host.includes('localhost') && !host.includes('app.localhost') && !host.includes('admin.localhost')
+  
+  const appPrefix = isLocalhost ? '/app' : ''
+  
+  // Brand new user always goes to onboarding
+  return { success: true, redirectTo: `${appPrefix}/onboarding` }
 }
 
 export async function logout() {
@@ -194,5 +253,14 @@ export async function logout() {
   const cookieStore = await cookies()
   cookieStore.delete('active_business_id')
   
-  redirect('/login')
+  const headersList = await headers()
+  const referer = headersList.get('referer') || ''
+  const host = headersList.get('host') || ''
+  const isLocalhost = host.includes('localhost') && !host.includes('app.localhost') && !host.includes('admin.localhost')
+  
+  if (isLocalhost) {
+    redirect(referer.includes('/admin') ? '/admin/login' : '/app/login')
+  } else {
+    redirect('/login')
+  }
 }

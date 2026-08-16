@@ -5,8 +5,8 @@ ALTER TYPE public.user_role ADD VALUE IF NOT EXISTS 'staff';
 
 -- 2. Add audit columns to transactions
 ALTER TABLE public.transactions
-  ADD COLUMN updated_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-  ADD COLUMN reversed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS updated_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS reversed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- 3. Create has_permission function for RLS
 CREATE OR REPLACE FUNCTION public.has_permission(p_user_id uuid, p_business_id uuid, p_permission text)

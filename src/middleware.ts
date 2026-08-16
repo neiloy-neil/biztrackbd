@@ -1,8 +1,27 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  const url = request.nextUrl
+  let hostname = request.headers.get('host') || ''
+
+  // Support local development (e.g. app.localhost:3000)
+  // Remove port if exists for cleaner matching
+  const host = hostname.split(':')[0]
+
+  let rewriteUrl = url
+
+  if (host === 'admin.biztrack.com' || host === 'admin.localhost') {
+    // Rewrite to /admin/...
+    rewriteUrl = new URL(`/admin${url.pathname === '/' ? '' : url.pathname}${url.search}`, request.url)
+  } else if (host === 'app.biztrack.com' || host === 'app.localhost') {
+    // Rewrite to /app/...
+    rewriteUrl = new URL(`/app${url.pathname === '/' ? '' : url.pathname}${url.search}`, request.url)
+  }
+
+  // Pass the (potentially rewritten) request to Supabase auth middleware
+  // We'll pass the rewriteUrl so updateSession knows where they are actually trying to go
+  return await updateSession(request, rewriteUrl)
 }
 
 export const config = {

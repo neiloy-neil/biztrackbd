@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { sendOtp, verifyOtp } from '../actions'
+import { checkUserExists, loginWithPin, sendOtp, verifyOtpAndCreateUser } from '../actions'
+
+type Step = 'phone' | 'login_pin' | 'otp' | 'create_pin'
 
 export function LoginForm() {
   const [phone, setPhone] = useState('')
+  const [pin, setPin] = useState('')
   const [otp, setOtp] = useState('')
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
+  
+  const [step, setStep] = useState<Step>('phone')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [timer, setTimer] = useState(0)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -24,47 +29,105 @@ export function LoginForm() {
     return () => clearInterval(interval)
   }, [timer])
 
-  const handleSendOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
     setError('')
     
-    // Validate phone briefly
     if (!phone || phone.length < 10) {
       setError('Please enter a valid phone number')
       setLoading(false)
       return
     }
 
+    const { exists } = await checkUserExists(phone)
+    
+    if (exists) {
+      setStep('login_pin')
+      setLoading(false)
+    } else {
+      const res = await sendOtp(phone)
+      if (!res.success) {
+        setError(res.error || 'Failed to send OTP')
+      } else {
+        setStep('otp')
+        setTimer(60)
+      }
+      setLoading(false)
+    }
+  }
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (pin.length < 6) {
+      setError('PIN must be at least 6 digits')
+      setLoading(false)
+      return
+    }
+
+    const res = await loginWithPin(phone, pin)
+    if (!res.success) {
+      setError(res.error || 'Invalid PIN')
+      setLoading(false)
+    } else {
+      router.push(res.redirectTo || '/dashboard')
+    }
+  }
+
+  const handleOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otp.length < 6) {
+      setError('Please enter a valid 6-digit OTP')
+      return
+    }
+    setError('')
+    setStep('create_pin')
+  }
+
+  const handleCreateAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (pin.length < 6) {
+      setError('PIN must be at least 6 digits')
+      setLoading(false)
+      return
+    }
+
+    const res = await verifyOtpAndCreateUser(phone, otp, pin)
+    if (!res.success) {
+      setError(res.error || 'Failed to verify OTP or create account')
+      if (res.error?.includes('OTP')) {
+        setStep('otp')
+      }
+      setLoading(false)
+    } else {
+      router.push(res.redirectTo || '/onboarding')
+    }
+  }
+
+  const handleResendOtp = async () => {
+    setLoading(true)
+    setError('')
     const res = await sendOtp(phone)
     if (!res.success) {
       setError(res.error || 'Failed to send OTP')
     } else {
-      setStep('otp')
       setTimer(60)
     }
     setLoading(false)
   }
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    const res = await verifyOtp(phone, otp)
-    if (!res.success) {
-      setError(res.error || 'Invalid OTP')
-      setLoading(false)
-    } else {
-      // Use server-determined redirect (onboarding for new users, dashboard for existing)
-      router.push((res as any).redirectTo || '/dashboard')
-    }
-  }
-
   return (
     <div className="bg-white px-6 py-8 shadow-sm ring-1 ring-slate-900/5 sm:rounded-2xl border border-slate-100">
-      {step === 'phone' ? (
-        <form onSubmit={handleSendOtp} className="space-y-6">
+      
+      {/* STEP 1: PHONE */}
+      {step === 'phone' && (
+        <form onSubmit={handlePhoneSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="phone" className="text-slate-700 font-medium">মোবাইল নম্বর (Mobile Number)</Label>
             <div className="relative">
@@ -92,13 +155,51 @@ export function LoginForm() {
             {loading ? 'অপেক্ষা করুন...' : 'এগিয়ে যান (Continue)'}
           </Button>
         </form>
-      ) : (
-        <form onSubmit={handleVerifyOtp} className="space-y-6">
+      )}
+
+      {/* STEP 2: LOGIN PIN */}
+      {step === 'login_pin' && (
+        <form onSubmit={handleLoginSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="login_pin" className="text-slate-700 font-medium">লগইন পিন দিন (Enter PIN)</Label>
+            <Input 
+              id="login_pin" 
+              type="password"
+              inputMode="numeric"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="••••••" 
+              required 
+              autoFocus
+              className="h-12 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 rounded-xl text-center text-2xl tracking-widest font-bold"
+            />
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              Logging into <span className="font-semibold">+880 {phone}</span>.{' '}
+              <button type="button" onClick={() => setStep('phone')} className="text-emerald-600 hover:underline">Change</button>
+            </p>
+          </div>
+          
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-800 border border-rose-200">
+              {error}
+            </div>
+          )}
+          
+          <Button disabled={loading || pin.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
+            {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন (Login)'}
+          </Button>
+        </form>
+      )}
+
+      {/* STEP 3: OTP */}
+      {step === 'otp' && (
+        <form onSubmit={handleOtpSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="otp" className="text-slate-700 font-medium">ওটিপি কোড (OTP Code)</Label>
             <Input 
               id="otp" 
               type="text"
+              inputMode="numeric"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000" 
@@ -120,18 +221,51 @@ export function LoginForm() {
           
           <div className="grid gap-3 pt-2">
             <Button disabled={loading || otp.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
-              {loading ? 'অপেক্ষা করুন...' : 'ভেরিফাই করুন (Verify)'}
+              এগিয়ে যান (Continue)
             </Button>
             <Button 
               type="button" 
               disabled={timer > 0 || loading} 
-              onClick={() => handleSendOtp()} 
+              onClick={handleResendOtp} 
               variant="outline" 
               className="w-full h-12 text-base font-medium text-slate-700 border-slate-300 hover:bg-slate-50 rounded-xl"
             >
               {timer > 0 ? `পুনরায় পাঠাতে পারবেন ${timer}s পর` : 'পুনরায় পাঠান (Resend OTP)'}
             </Button>
           </div>
+        </form>
+      )}
+
+      {/* STEP 4: CREATE PIN */}
+      {step === 'create_pin' && (
+        <form onSubmit={handleCreateAccountSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="create_pin" className="text-slate-700 font-medium">একটি ৬-ডিজিট পিন সেট করুন (Set new PIN)</Label>
+            <Input 
+              id="create_pin" 
+              type="password"
+              inputMode="numeric"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="••••••" 
+              required 
+              autoFocus
+              className="h-12 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 rounded-xl text-center text-2xl tracking-widest font-bold"
+            />
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              This 6-digit PIN will be required for future logins.
+            </p>
+          </div>
+          
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-800 border border-rose-200">
+              {error}
+            </div>
+          )}
+          
+          <Button disabled={loading || pin.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
+            {loading ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'অ্যাকাউন্ট তৈরি করুন (Create Account)'}
+          </Button>
         </form>
       )}
     </div>

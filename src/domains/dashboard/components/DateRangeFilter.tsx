@@ -8,7 +8,8 @@ export function DateRangeFilter() {
   const searchParams = useSearchParams()
   const currentRange = searchParams.get('range') || 'today'
 
-  const handleValueChange = (val: string) => {
+  const handleValueChange = (val: string | null) => {
+    if (!val) return
     const params = new URLSearchParams(searchParams)
     params.set('range', val)
     router.push(`?${params.toString()}`)

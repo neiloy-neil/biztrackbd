@@ -145,7 +145,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">রোল নির্ধারণ করুন</label>
-              <Select value={newRole} onValueChange={setNewRole}>
+              <Select value={newRole} onValueChange={(v) => v && setNewRole(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="রোল নির্বাচন করুন" />
                 </SelectTrigger>
@@ -173,7 +173,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">নতুন রোল নির্বাচন করুন</label>
-              <Select value={editRole} onValueChange={setEditRole}>
+              <Select value={editRole} onValueChange={(v) => v && setEditRole(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="রোল নির্বাচন করুন" />
                 </SelectTrigger>

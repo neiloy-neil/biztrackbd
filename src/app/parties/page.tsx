@@ -14,7 +14,8 @@ export default async function PartiesPage({
   const type = resolvedParams?.type as 'customer' | 'supplier' | undefined
   const search = resolvedParams?.search as string | undefined
 
-  const { data: parties } = await getParties({ type, search })
+  const partiesRes = await getParties({ type, search })
+  const parties = partiesRes?.success ? partiesRes.data : []
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 pb-24 bg-[#FAFAFA] min-h-screen">

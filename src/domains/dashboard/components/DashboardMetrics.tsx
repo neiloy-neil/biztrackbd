@@ -7,9 +7,10 @@ export async function DashboardMetrics({ startDate, endDate }: { startDate: stri
   const res = await getDashboardSummary({ startDate, endDate })
 
   if (!res?.success || !res.data) {
+    const errMsg = res && !res.success ? res.error : 'Unknown error'
     return (
       <div className="p-4 bg-rose-50 text-rose-600 rounded-lg border border-rose-200">
-        Error loading metrics: {res?.error || 'Unknown error'}
+        Error loading metrics: {errMsg}
       </div>
     )
   }

@@ -7,13 +7,16 @@ import Link from 'next/link'
 import { format } from '@/lib/utils/date'
 
 async function PartyDetails({ id }: { id: string }) {
-  const { data: party, success, error } = await getParty({ id })
+  const partyRes = await getParty({ id })
+  const party = partyRes?.success ? partyRes.data : null
+  const partyError = !partyRes?.success ? partyRes?.error : null
 
-  if (!success || !party) {
-    return <div className="text-center text-red-500 py-10">পার্টি পাওয়া যায়নি ({error})</div>
+  if (!partyRes?.success || !party) {
+    return <div className="text-center text-red-500 py-10">পার্টি পাওয়া যায়নি ({partyError})</div>
   }
 
-  const { data: transactions } = await getPartyTransactions({ id })
+  const transRes = await getPartyTransactions({ id })
+  const transactions = transRes?.success ? transRes.data : []
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(amount))
   }
@@ -84,10 +87,10 @@ async function PartyDetails({ id }: { id: string }) {
         <h3 className="text-lg font-bold text-slate-900 mb-4">লেনদেন বিবরণী</h3>
         <Card>
           <div className="divide-y">
-            {transactions?.length === 0 ? (
+            {transactions.length === 0 ? (
               <div className="p-8 text-center text-slate-500">কোনো লেনদেন পাওয়া যায়নি</div>
             ) : (
-              transactions?.map((txn: any) => (
+              transactions.map((txn: any) => (
                 <div key={txn.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                   <div>
                     <p className="font-medium text-slate-900 capitalize">

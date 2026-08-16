@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { addParty } from '@/domains/parties/actions'
+import { createParty } from '@/domains/parties/actions'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useState } from 'react'
-import { PartyType } from '@/types/database'
+type PartyType = 'customer' | 'supplier' | 'both'
 import { toast } from 'sonner'
 
 const formSchema = z.object({
@@ -43,11 +43,11 @@ export function PartyForm({ businessId, type, onSuccess }: PartyFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
     try {
-      await addParty({
-        business_id: businessId,
+      await createParty({
         type,
         name: values.name,
         phone: values.phone,
+        opening_balance: 0
       })
       toast.success(type === 'customer' ? 'Customer added!' : 'Supplier added!')
       form.reset()

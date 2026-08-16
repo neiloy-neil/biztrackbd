@@ -39,7 +39,7 @@ export function TrendChart({ data }: { data: any[] }) {
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 labelStyle={{ fontWeight: 'bold', color: '#0f172a' }}
                 itemStyle={{ fontSize: '12px', fontWeight: '500' }}
-                formatter={(value: number) => [`৳${value}`, '']}
+                formatter={(value: unknown) => [`৳${value ?? 0}`, '']}
               />
               <Area type="monotone" dataKey="sales" name="বিক্রি" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
               <Area type="monotone" dataKey="expenses" name="খরচ" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpenses)" />

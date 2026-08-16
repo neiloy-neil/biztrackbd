@@ -5,7 +5,11 @@ import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
 
-export const getDailyClosingSummary = requirePermission('closing.manage', authAction(async (data: { date: string }, ctx) => {
+type ClosingStatus =
+  | { status: 'closed'; closing: { id: string; expected_cash: number; actual_cash: number; difference: number; reason: string | null; closed_at: string; summary: any } }
+  | { status: 'open'; summary: any }
+
+export const getDailyClosingSummary = requirePermission('closing.manage', authAction(async (data: { date: string }, ctx): Promise<import('@/types/api').ActionResponse<ClosingStatus>> => {
   const supabase = await createClient()
 
   // 1. Check if already closed
@@ -17,7 +21,7 @@ export const getDailyClosingSummary = requirePermission('closing.manage', authAc
     .single()
 
   if (existingClosing) {
-    return { success: true, data: { status: 'closed', closing: existingClosing } }
+    return { success: true, data: { status: 'closed', closing: existingClosing as any } }
   }
 
   // 2. Fetch the summary securely via RPC

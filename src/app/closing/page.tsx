@@ -26,7 +26,7 @@ export default async function ClosingPage() {
     <div className="flex-1 bg-slate-50 min-h-screen pb-24">
       <ClosingClient 
         today={today} 
-        closingData={res.data} 
+        closingData={res.data as any} 
       />
     </div>
   )

@@ -55,7 +55,7 @@ export default function SalesReport({ dateRange, exportTrigger }: { dateRange: D
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), 'MMM dd')} stroke="#94a3b8" fontSize={12} />
                 <YAxis stroke="#94a3b8" fontSize={12} />
-                <RechartsTooltip formatter={(value) => [`৳${value}`, 'Revenue']} labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')} />
+                <RechartsTooltip formatter={(value) => [`৳${value}`, 'Revenue']} labelFormatter={(label: string) => format(new Date(label), 'MMM dd, yyyy')} />
                 <Line type="monotone" dataKey="total" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -100,7 +100,7 @@ export default function SalesReport({ dateRange, exportTrigger }: { dateRange: D
                     paddingAngle={5}
                     dataKey="amount"
                     nameKey="account"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: { name: string; percent?: number }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {data.sales_by_payment.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

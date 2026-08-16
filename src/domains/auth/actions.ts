@@ -64,9 +64,9 @@ export async function sendOtp(phone: string) {
   // Generate 6-digit OTP
   const otp = String(Math.floor(100000 + Math.random() * 900000))
 
-  // Store in database
-  const supabase = await createClient()
-  const { error: dbError } = await supabase
+  // Use admin client to bypass RLS (user is not authenticated yet)
+  const adminClient = await createAdminClient()
+  const { error: dbError } = await adminClient
     .from('phone_otps')
     .insert({ phone: normalizedPhone, otp, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() })
 
@@ -89,10 +89,11 @@ export async function verifyOtp(phone: string, token: string) {
   if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
 
   const normalizedPhone = normalizePhone(phone)
-  const supabase = await createClient()
+  // Use admin client - user is not authenticated yet
+  const adminClient = await createAdminClient()
 
   // Find the most recent unverified OTP for this phone
-  const { data: otpRecord, error: fetchError } = await supabase
+  const { data: otpRecord, error: fetchError } = await adminClient
     .from('phone_otps')
     .select('*')
     .eq('phone', normalizedPhone)
@@ -107,7 +108,7 @@ export async function verifyOtp(phone: string, token: string) {
   }
 
   // Increment attempts
-  await supabase
+  await adminClient
     .from('phone_otps')
     .update({ attempts: (otpRecord.attempts || 0) + 1 })
     .eq('id', otpRecord.id)
@@ -121,7 +122,7 @@ export async function verifyOtp(phone: string, token: string) {
   }
 
   // Mark OTP as verified
-  await supabase
+  await adminClient
     .from('phone_otps')
     .update({ verified_at: new Date().toISOString() })
     .eq('id', otpRecord.id)
@@ -131,6 +132,7 @@ export async function verifyOtp(phone: string, token: string) {
   const password = derivePassword(normalizedPhone)
 
   // Try to sign in first
+  const supabase = await createClient()
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
   if (signInData?.user) {
@@ -139,7 +141,6 @@ export async function verifyOtp(phone: string, token: string) {
 
   // If sign in failed (user doesn't exist), create the account
   if (signInError) {
-    const adminClient = await createAdminClient()
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,

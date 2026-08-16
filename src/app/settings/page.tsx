@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { logout } from '@/domains/auth/actions'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -49,7 +50,7 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <form action="/api/auth/signout" method="POST">
+        <form action={logout}>
           <Button type="submit" variant="destructive" className="w-full">
             <LogOut className="mr-2 h-4 w-4" /> লগ আউট (Log Out)
           </Button>

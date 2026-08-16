@@ -54,36 +54,26 @@ export const getLowStockProducts = authAction(async (
 ) => {
   const supabase = await createClient()
 
-  // To find low stock efficiently without a materialized view:
-  // We sum the inventory movements.
-  // Note: For a true production app with 1M movements, this should use a materialized view.
-  const { data: stock, error } = await supabase
+  const { data: lowStock, error } = await supabase
     .from('products')
-    .select(`
-      id,
-      name,
-      inventory_movements ( type, quantity )
-    `)
+    .select('id, name, current_stock')
     .eq('business_id', ctx.businessId)
+    .lte('current_stock', data.threshold)
+    .order('current_stock', { ascending: true })
+    .limit(data.limit)
 
   if (error) {
     return { success: false, error: error.message }
   }
 
-  // Calculate current stock in memory (temporary until materialized view is created)
-  const lowStock = stock.map(p => {
-    let currentStock = 0
-    p.inventory_movements.forEach((m: any) => {
-      if (m.type === 'in') currentStock += Number(m.quantity)
-      else if (m.type === 'out') currentStock -= Number(m.quantity)
-      else if (m.type === 'adjustment') currentStock = Number(m.quantity) // Simplified assumption
-    })
-    return { id: p.id, name: p.name, currentStock }
-  }).filter(p => p.currentStock <= data.threshold)
-    .sort((a, b) => a.currentStock - b.currentStock)
-    .slice(0, data.limit)
+  // Map to match the expected format
+  const formattedStock = lowStock.map(p => ({
+    id: p.id,
+    name: p.name,
+    currentStock: Number(p.current_stock)
+  }))
 
-  return { success: true, data: lowStock }
+  return { success: true, data: formattedStock }
 })
 
 export const getTrendData = authAction(async (
@@ -92,31 +82,21 @@ export const getTrendData = authAction(async (
 ) => {
   const supabase = await createClient()
 
-  // For a real production app, you'd want to use date_trunc in SQL to group by day.
-  // Since we don't have a specific RPC for trend yet, we can fetch the transactions
-  // and group them in memory since we are filtering by a small date range (e.g. month).
-  const { data: txns, error } = await supabase
-    .from('transactions')
-    .select('type, total_amount, transaction_date')
-    .eq('business_id', ctx.businessId)
-    .in('type', ['sale', 'expense'])
-    .gte('transaction_date', data.startDate)
-    .lte('transaction_date', data.endDate)
+  const { data: trendData, error } = await supabase.rpc('get_trend_data', {
+    p_business_id: ctx.businessId,
+    p_start_date: data.startDate,
+    p_end_date: data.endDate
+  })
 
   if (error) {
     return { success: false, error: error.message }
   }
 
-  const grouped = txns.reduce((acc: any, txn) => {
-    const date = txn.transaction_date.substring(5, 10) // MM-DD
-    if (!acc[date]) {
-      acc[date] = { date, sales: 0, expenses: 0 }
-    }
-    if (txn.type === 'sale') acc[date].sales += Number(txn.total_amount)
-    if (txn.type === 'expense') acc[date].expenses += Number(txn.total_amount)
-    return acc
-  }, {})
+  const chartData = (trendData || []).map((row: any) => ({
+    date: row.trend_date,
+    sales: Number(row.sales),
+    expenses: Number(row.expenses)
+  }))
 
-  const chartData = Object.values(grouped).sort((a: any, b: any) => a.date.localeCompare(b.date))
   return { success: true, data: chartData }
 })

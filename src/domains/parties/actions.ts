@@ -8,9 +8,10 @@ export const getParties = authAction(async (data: { type?: 'customer' | 'supplie
   const supabase = await createClient()
 
   let query = supabase
-    .from('v_party_balances')
+    .from('parties')
     .select('*')
     .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
 
   if (data.type) {
     if (data.type === 'both') {
@@ -35,7 +36,7 @@ export const getParty = authAction(async (data: { id: string }, ctx) => {
   const supabase = await createClient()
 
   const { data: party, error } = await supabase
-    .from('v_party_balances')
+    .from('parties')
     .select('*')
     .eq('business_id', ctx.businessId)
     .eq('id', data.id)

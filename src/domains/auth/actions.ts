@@ -140,7 +140,17 @@ export async function verifyOtp(phone: string, token: string) {
       .eq('user_id', userId)
       .limit(1)
       .single()
-    return member ? '/dashboard' : '/onboarding'
+      
+    if (member) {
+      const { cookies } = await import('next/headers')
+      const cookieStore = await cookies()
+      cookieStore.set('active_business_id', member.business_id, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30 // 30 days
+      })
+      return '/dashboard'
+    }
+    return '/onboarding'
   }
 
   // Try to sign in first
@@ -179,5 +189,10 @@ export async function verifyOtp(phone: string, token: string) {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  cookieStore.delete('active_business_id')
+  
   redirect('/login')
 }

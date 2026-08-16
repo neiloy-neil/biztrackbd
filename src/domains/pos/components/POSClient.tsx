@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, Plus, Minus, Trash2, ShoppingCart, ArrowLeft, Printer, CheckCircle2, Loader2, User, Edit2 } from 'lucide-react'
-import Link from 'next/link'
+import { AppLink as Link } from '@/components/AppLink'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'

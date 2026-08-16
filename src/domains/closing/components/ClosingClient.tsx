@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Lock, Calculator, TrendingUp, TrendingDown, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { closeDay } from '../actions'
 import { toast } from 'sonner'
-import Link from 'next/link'
+import { AppLink as Link } from '@/components/AppLink'
 import { cn } from '@/lib/utils'
 import { RequirePermission } from '@/hooks/usePermissions'
 

@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   // Remove port if exists for cleaner matching
   const host = hostname.split(':')[0]
 
-  let rewriteUrl = url
+  let rewriteUrl: URL | null = null
 
   if (host === 'admin.biztrack.com' || host === 'admin.localhost') {
     // Rewrite to /admin/...
@@ -20,8 +20,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Pass the (potentially rewritten) request to Supabase auth middleware
-  // We'll pass the rewriteUrl so updateSession knows where they are actually trying to go
-  return await updateSession(request, rewriteUrl)
+  const response = await updateSession(request)
+
+  if (rewriteUrl) {
+    return NextResponse.rewrite(rewriteUrl, { headers: response.headers })
+  }
+
+  return response
 }
 
 export const config = {

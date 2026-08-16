@@ -1,12 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function updateSession(request: NextRequest, rewriteUrl?: URL) {
-  let supabaseResponse = rewriteUrl && rewriteUrl.pathname !== request.nextUrl.pathname
-    ? NextResponse.rewrite(rewriteUrl)
-    : NextResponse.next({
-        request,
-      })
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,12 +13,8 @@ export async function updateSession(request: NextRequest, rewriteUrl?: URL) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = rewriteUrl && rewriteUrl.pathname !== request.nextUrl.pathname
-            ? NextResponse.rewrite(rewriteUrl)
-            : NextResponse.next({
-                request,
-              })
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -33,7 +25,7 @@ export async function updateSession(request: NextRequest, rewriteUrl?: URL) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const pathname = rewriteUrl ? rewriteUrl.pathname : request.nextUrl.pathname
+  const pathname = request.nextUrl.pathname
   const url = request.nextUrl.clone()
 
   const isLoginPath = pathname === '/app/login' || pathname === '/login' || pathname === '/admin/login'

@@ -33,7 +33,8 @@ BEGIN
     ELSIF NEW.type = 'out' THEN
       UPDATE public.products SET current_stock = current_stock - NEW.quantity, updated_at = now() WHERE id = NEW.product_id;
     ELSIF NEW.type = 'adjustment' THEN
-      UPDATE public.products SET current_stock = NEW.quantity, updated_at = now() WHERE id = NEW.product_id;
+      -- Additive adjustment (positive adds stock, negative removes stock)
+      UPDATE public.products SET current_stock = current_stock + NEW.quantity, updated_at = now() WHERE id = NEW.product_id;
     END IF;
   ELSIF TG_OP = 'DELETE' THEN
     IF OLD.type = 'in' THEN

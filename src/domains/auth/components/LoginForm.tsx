@@ -56,8 +56,8 @@ export function LoginForm() {
       setError(res.error || 'Invalid OTP')
       setLoading(false)
     } else {
-      // Success. Middleware will handle redirect to /onboarding or /dashboard
-      router.push('/dashboard')
+      // Use server-determined redirect (onboarding for new users, dashboard for existing)
+      router.push((res as any).redirectTo || '/dashboard')
     }
   }
 

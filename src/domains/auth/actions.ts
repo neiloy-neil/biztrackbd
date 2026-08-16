@@ -130,13 +130,25 @@ export async function verifyOtp(phone: string, token: string) {
   // Now sign user in (or create account) using derived credentials
   const email = deriveEmail(normalizedPhone)
   const password = derivePassword(normalizedPhone)
+  const supabase = await createClient()
+
+  // Check if user has a business to determine where to redirect
+  async function getRedirectPath(userId: string): Promise<string> {
+    const { data: member } = await supabase
+      .from('business_members')
+      .select('business_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .single()
+    return member ? '/dashboard' : '/onboarding'
+  }
 
   // Try to sign in first
-  const supabase = await createClient()
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
   if (signInData?.user) {
-    return { success: true }
+    const redirectTo = await getRedirectPath(signInData.user.id)
+    return { success: true, redirectTo }
   }
 
   // If sign in failed (user doesn't exist), create the account
@@ -153,13 +165,15 @@ export async function verifyOtp(phone: string, token: string) {
     }
 
     // Now sign in with the newly created account
-    const { error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: finalData, error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password })
     if (finalSignInError) {
       return { success: false, error: finalSignInError.message }
     }
+    // Brand new user - always goes to onboarding
+    return { success: true, redirectTo: '/onboarding' }
   }
 
-  return { success: true }
+  return { success: true, redirectTo: '/dashboard' }
 }
 
 export async function logout() {

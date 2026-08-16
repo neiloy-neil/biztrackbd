@@ -8,10 +8,9 @@ export const getParties = authAction(async (data: { type?: 'customer' | 'supplie
   const supabase = await createClient()
 
   let query = supabase
-    .from('parties')
+    .from('v_party_balances')
     .select('*')
     .eq('business_id', ctx.businessId)
-    .is('deleted_at', null)
 
   if (data.type) {
     if (data.type === 'both') {
@@ -25,7 +24,6 @@ export const getParties = authAction(async (data: { type?: 'customer' | 'supplie
     query = query.ilike('name', `%${data.search}%`)
   }
 
-  // Use a string column for ordering, current_due is numeric from the view
   const { data: parties, error } = await query.order('current_due', { ascending: false })
 
   if (error) return { success: false, error: error.message }
@@ -36,7 +34,7 @@ export const getParty = authAction(async (data: { id: string }, ctx) => {
   const supabase = await createClient()
 
   const { data: party, error } = await supabase
-    .from('parties')
+    .from('v_party_balances')
     .select('*')
     .eq('business_id', ctx.businessId)
     .eq('id', data.id)

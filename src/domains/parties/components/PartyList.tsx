@@ -42,7 +42,8 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(amount))
+    const safe = isNaN(amount) ? 0 : amount
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(safe))
   }
 
   return (

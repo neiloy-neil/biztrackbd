@@ -22,7 +22,7 @@ async function PartyDetails({ id }: { id: string }) {
   }
 
   const isCustomer = party.type === 'customer'
-  const currentDue = Number(party.current_due)
+  const currentDue = Number(party.current_due ?? 0)
 
   return (
     <div className="space-y-6">

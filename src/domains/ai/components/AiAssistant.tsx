@@ -1,19 +1,33 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
+import { TextStreamChatTransport } from 'ai'
 import { useRef, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send, Sparkles, User } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 
 export function AiAssistant() {
   const [input, setInput] = useState('')
   const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ url: '/api/ai/chat' }),
+    transport: new TextStreamChatTransport({ api: '/api/ai/chat' }),
   })
   const isLoading = status === 'submitted' || status === 'streaming'
+
+  function getMessageText(m: any): string {
+    if (Array.isArray(m.parts)) {
+      return m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('')
+    }
+    return m.content ?? ''
+  }
+
+  function renderText(text: string) {
+    return text.split(/(\*\*[^*]+\*\*)/g).map((chunk, i) =>
+      chunk.startsWith('**') && chunk.endsWith('**')
+        ? <strong key={i}>{chunk.slice(2, -2)}</strong>
+        : <span key={i}>{chunk}</span>
+    )
+  }
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,7 +77,7 @@ export function AiAssistant() {
                     : 'bg-white border text-slate-700 rounded-tl-sm shadow-sm'
                 }`}
               >
-                {m.content}
+                {renderText(getMessageText(m))}
               </div>
               {m.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center">
@@ -94,7 +108,7 @@ export function AiAssistant() {
           onSubmit={(e) => {
             e.preventDefault()
             if (!input.trim() || isLoading) return
-            sendMessage({ role: 'user', content: input } as any)
+            sendMessage({ text: input })
             setInput('')
           }} 
           className="flex gap-2"

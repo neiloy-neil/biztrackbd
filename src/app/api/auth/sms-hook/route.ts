@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 
-// Note: Ensure NEXT_PUBLIC_SMS_NET_BD_API_KEY is added to your environment variables
-const SMS_API_KEY = process.env.NEXT_PUBLIC_SMS_NET_BD_API_KEY || process.env.SMS_NET_BD_API_KEY
+const SMS_API_KEY = process.env.SMS_NET_BD_API_KEY
 const SMS_ENDPOINT = 'https://api.sms.net.bd/sendsms'
 
 export async function POST(req: Request) {

@@ -44,17 +44,15 @@ export function authAction<TInput, TOutput>(
       return { success: false, error: 'Unauthorized: No active session' }
     }
 
-    // 3. Validate Tenant Membership (Authorization)
-    // Even though RLS protects data, checking here prevents unnecessary DB load and logic execution
+    // 3. Validate Tenant Membership + Business Status in one query
     const { data: memberData, error: memberError } = await supabase
       .from('business_members')
-      .select('role')
+      .select('role, businesses!inner(status)')
       .eq('business_id', activeBusinessId)
       .eq('user_id', user.id)
       .single()
 
     if (memberError || !memberData) {
-      // Audit log the failed authorization attempt
       await auditLog({
         action: 'unauthorized_tenant_access_attempt',
         entity_type: 'business',
@@ -63,6 +61,11 @@ export function authAction<TInput, TOutput>(
         user_id: user.id
       })
       return { success: false, error: 'Forbidden: You do not have access to this business' }
+    }
+
+    const bizStatus = (memberData.businesses as any)?.status
+    if (bizStatus !== 'active') {
+      return { success: false, error: 'Your business account has been suspended. Please contact support.' }
     }
 
     // 4. Execute the actual action with the secure context
@@ -80,26 +83,33 @@ export function authAction<TInput, TOutput>(
   }
 }
 
+// Mirror of public.has_permission() in the DB (migrations/20260817190000_rbac_canonical.sql).
+// These two must stay in sync — the DB function is the canonical source.
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   owner: ['*'],
   manager: [
-    'sales.create', 'sales.view', 'sales.edit',
-    'expenses.create', 'expenses.view', 'expenses.edit',
-    'customers.view', 'customers.manage',
-    'suppliers.view', 'suppliers.manage',
-    'products.manage', 'products.view',
+    'sales.create',    'sales.view',      'sales.edit',
+    'expenses.create', 'expenses.view',   'expenses.edit',
+    'customers.view',  'customers.manage',
+    'suppliers.view',  'suppliers.manage',
+    'products.view',   'products.manage',
     'inventory.manage',
-    'reports.view', 'staff.view', 'staff.manage', 'settings.manage',
-    'closing.manage'
+    'reports.view',
+    'staff.view',      'staff.manage',
+    'settings.manage',
+    'closing.manage',
   ],
   cashier: [
     'sales.create', 'sales.view',
-    'customers.view', 'products.view',
-    'closing.manage'
+    'customers.view',
+    'products.view',
+    'closing.manage',
   ],
   staff: [
-    'sales.view', 'customers.view', 'products.view'
-  ]
+    'sales.view',
+    'customers.view',
+    'products.view',
+  ],
 }
 
 export function hasPermission(role: string, permission: string): boolean {
@@ -124,23 +134,7 @@ export function idempotentAction<TInput, TOutput>(
 
     const supabase = await createClient()
 
-    // 1. Check if the idempotency key already exists for this business
-    const { data: existingKey } = await supabase
-      .from('idempotency_keys')
-      .select('*')
-      .eq('key', idempotencyKey)
-      .eq('business_id', ctx.businessId)
-      .single()
-
-    if (existingKey) {
-      // If it exists and was successful, return the cached successful response
-      if (existingKey.response_code === 200) {
-        return existingKey.response_body as ActionResponse<TOutput>
-      }
-      return { success: false, error: 'This request is already being processed or previously failed.' }
-    }
-
-    // 2. Insert the key to lock it
+    // 1. Insert the key to lock it (atomic operation)
     const { error: insertError } = await supabase
       .from('idempotency_keys')
       .insert({
@@ -152,9 +146,20 @@ export function idempotentAction<TInput, TOutput>(
       })
 
     if (insertError) {
-      // If insertion fails due to unique constraint, another request beat us to it
+      // If insertion fails due to unique constraint, another request beat us to it (or it's a retry)
       if (insertError.code === '23505') {
-        return { success: false, error: 'Duplicate request detected' }
+        // Fetch the existing key to check if it has a cached successful response
+        const { data: existingKey } = await supabase
+          .from('idempotency_keys')
+          .select('*')
+          .eq('key', idempotencyKey)
+          .eq('business_id', ctx.businessId)
+          .single()
+
+        if (existingKey && existingKey.response_code === 200) {
+          return existingKey.response_body as ActionResponse<TOutput>
+        }
+        return { success: false, error: 'This request is already being processed or previously failed.' }
       }
       return { success: false, error: 'Failed to process idempotency lock' }
     }
@@ -254,7 +259,7 @@ export function adminAction<TInput, TOutput>(
         action: 'unauthorized_platform_admin_access_attempt',
         entity_type: 'platform',
         entity_id: user.id,
-        business_id: null,
+        business_id: 'PLATFORM',
         user_id: user.id,
         new_data: { 
           request_type: 'admin_server_action',

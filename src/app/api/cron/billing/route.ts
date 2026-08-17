@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  // In production, you would want to secure this endpoint (e.g. check an Authorization header or Vercel Cron header)
   const authHeader = request.headers.get('authorization')
   if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -10,8 +9,6 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
   const now = new Date().toISOString()
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   try {
     const results = {
@@ -19,11 +16,11 @@ export async function GET(request: Request) {
       canceled: 0,
       past_due: 0,
       suspended: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     }
 
-    // 1. Process Ended Subscriptions (Renewals, Downgrades, Cancellations)
-    // Find active subscriptions where the period has ended
+    // ── Step 1: Renewals ──────────────────────────────────────
+    // Subscriptions whose billing period has ended.
     const { data: endedSubs, error: endedSubsError } = await supabase
       .from('subscriptions')
       .select('*, plans(*)')
@@ -32,97 +29,147 @@ export async function GET(request: Request) {
 
     if (endedSubsError) throw endedSubsError
 
-    for (const sub of (endedSubs || [])) {
+    for (const sub of endedSubs ?? []) {
       try {
         if (sub.cancel_at_period_end) {
-          // Process Cancellation
-          await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', sub.id)
+          await supabase
+            .from('subscriptions')
+            .update({ status: 'canceled', updated_at: now })
+            .eq('id', sub.id)
           results.canceled++
-        } else {
-          // Process Renewal or Downgrade
-          let nextPlanId = sub.plan_id
-          let amountToBill = sub.plans.price_monthly
-
-          // If there's a scheduled downgrade, apply it
-          if (sub.scheduled_plan_id) {
-            nextPlanId = sub.scheduled_plan_id
-            const { data: newPlan } = await supabase.from('plans').select('price_monthly').eq('id', nextPlanId).single()
-            if (newPlan) {
-              amountToBill = newPlan.price_monthly
-            }
-          }
-
-          // Generate new invoice
-          const { data: invoice, error: invoiceError } = await supabase.from('invoices').insert({
-            business_id: sub.business_id,
-            subscription_id: sub.id,
-            amount_due: amountToBill,
-            status: 'draft',
-            due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days to pay
-          }).select().single()
-
-          if (invoiceError) throw invoiceError
-
-          // If the amount to bill is 0 (e.g. Free plan), automatically mark paid and renew
-          if (amountToBill === 0 || amountToBill === 0.0) {
-            await supabase.from('invoices').update({ status: 'paid' }).eq('id', invoice.id)
-            
-            const periodStart = new Date(sub.current_period_end)
-            const periodEnd = new Date(sub.current_period_end)
-            periodEnd.setMonth(periodEnd.getMonth() + 1)
-
-            await supabase.from('subscriptions').update({
-              plan_id: nextPlanId,
-              current_period_start: periodStart.toISOString(),
-              current_period_end: periodEnd.toISOString(),
-              scheduled_plan_id: null
-            }).eq('id', sub.id)
-          } else {
-            // Keep subscription active, but since period_end is in the past, they are technically in grace period
-            // If they don't pay within 3 days, step 2 will catch them.
-            if (sub.scheduled_plan_id) {
-               // Update to the new plan id immediately, even if unpaid, so features restrict
-               await supabase.from('subscriptions').update({
-                 plan_id: nextPlanId,
-                 scheduled_plan_id: null
-               }).eq('id', sub.id)
-            }
-          }
-          
-          results.renewed++
+          continue
         }
+
+        const nextPlanId   = sub.scheduled_plan_id ?? sub.plan_id
+        const nextPlan     = sub.scheduled_plan_id
+          ? (await supabase.from('plans').select('price_monthly').eq('id', nextPlanId).single()).data
+          : sub.plans
+        const amountToBill = nextPlan?.price_monthly ?? 0
+
+        // Advance the billing period so this sub is not picked up again next run.
+        const newPeriodStart = new Date(sub.current_period_end)
+        const newPeriodEnd   = new Date(sub.current_period_end)
+        newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+
+        if (amountToBill === 0) {
+          // Free plan — auto-renew immediately with no invoice required
+          await supabase
+            .from('subscriptions')
+            .update({
+              plan_id:               nextPlanId,
+              status:                'active',
+              current_period_start:  newPeriodStart.toISOString(),
+              current_period_end:    newPeriodEnd.toISOString(),
+              scheduled_plan_id:     null,
+              updated_at:            now,
+            })
+            .eq('id', sub.id)
+          results.renewed++
+          continue
+        }
+
+        // Paid plan — create an open invoice and advance the period.
+        // Advancing the period now means the subscription keeps working
+        // (grace period) until the invoice overdue logic below kicks in.
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            business_id:          sub.business_id,
+            subscription_id:      sub.id,
+            amount_due:           amountToBill,
+            status:               'open',
+            due_date:             new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            billing_period_start: newPeriodStart.toISOString(),
+            billing_period_end:   newPeriodEnd.toISOString(),
+          })
+
+        if (invoiceError) throw invoiceError
+
+        await supabase
+          .from('subscriptions')
+          .update({
+            plan_id:               nextPlanId,
+            current_period_start:  newPeriodStart.toISOString(),
+            current_period_end:    newPeriodEnd.toISOString(),
+            scheduled_plan_id:     null,
+            updated_at:            now,
+          })
+          .eq('id', sub.id)
+
+        results.renewed++
       } catch (err: any) {
-        results.errors.push(`Error processing sub ${sub.id}: ${err.message}`)
+        results.errors.push(`Renewal error sub ${sub.id}: ${err.message}`)
       }
     }
 
-    // 2. Process Past Due (Grace Period Expired)
-    // Find active subscriptions where current_period_end is > 3 days ago
-    const { data: pastDueSubs, error: pastDueError } = await supabase
-      .from('subscriptions')
-      .select('id, business_id')
-      .eq('status', 'active')
-      .lte('current_period_end', threeDaysAgo)
+    // ── Step 2: Past Due ──────────────────────────────────────
+    // Open invoices whose due_date passed 3 days ago.
+    // Querying invoices (not period_end) so it works correctly after
+    // step 1 has already advanced current_period_end.
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 
-    if (pastDueError) throw pastDueError
+    const { data: overdueInvoices } = await supabase
+      .from('invoices')
+      .select('subscription_id')
+      .eq('status', 'open')
+      .lte('due_date', threeDaysAgo)
 
-    for (const sub of (pastDueSubs || [])) {
-       await supabase.from('subscriptions').update({ status: 'past_due' }).eq('id', sub.id)
-       results.past_due++
+    const pastDueSubIds = [...new Set(
+      (overdueInvoices ?? []).map(i => i.subscription_id).filter(Boolean)
+    )]
+
+    if (pastDueSubIds.length > 0) {
+      const { data: updated } = await supabase
+        .from('subscriptions')
+        .update({ status: 'past_due', updated_at: now })
+        .in('id', pastDueSubIds)
+        .eq('status', 'active')
+        .select('id')
+
+      results.past_due += updated?.length ?? 0
     }
 
-    // 3. Process Suspensions (Past Due for > 7 days)
-    const { data: suspendedSubs, error: suspError } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('status', 'past_due')
-      .lte('current_period_end', sevenDaysAgo)
+    // ── Step 3: Suspend ───────────────────────────────────────
+    // Open invoices whose due_date passed 7 days ago → suspend the
+    // subscription AND the business so the middleware blocks access.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    if (suspError) throw suspError
+    const { data: expiredInvoices } = await supabase
+      .from('invoices')
+      .select('subscription_id, subscriptions!inner(business_id)')
+      .eq('status', 'open')
+      .lte('due_date', sevenDaysAgo)
 
-    for (const sub of (suspendedSubs || [])) {
-       await supabase.from('subscriptions').update({ status: 'suspended' }).eq('id', sub.id)
-       results.suspended++
+    const suspendSubIds: string[]  = []
+    const suspendBizIds: string[]  = []
+
+    for (const inv of expiredInvoices ?? []) {
+      if (inv.subscription_id) suspendSubIds.push(inv.subscription_id)
+      const bizId = (inv.subscriptions as any)?.business_id
+      if (bizId) suspendBizIds.push(bizId)
+    }
+
+    const uniqueSubIds = [...new Set(suspendSubIds)]
+    const uniqueBizIds = [...new Set(suspendBizIds)]
+
+    if (uniqueSubIds.length > 0) {
+      const { data: suspendedSubs } = await supabase
+        .from('subscriptions')
+        .update({ status: 'suspended', updated_at: now })
+        .in('id', uniqueSubIds)
+        .in('status', ['active', 'past_due'])
+        .select('id')
+
+      results.suspended += suspendedSubs?.length ?? 0
+    }
+
+    // Cascade: suspended subscription → suspended business
+    if (uniqueBizIds.length > 0) {
+      await supabase
+        .from('businesses')
+        .update({ status: 'suspended', updated_at: now })
+        .in('id', uniqueBizIds)
+        .eq('status', 'active')
     }
 
     return NextResponse.json({ success: true, results })

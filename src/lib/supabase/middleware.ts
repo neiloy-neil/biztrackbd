@@ -95,26 +95,56 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Check if onboarding is needed (only for app routes, never admin routes)
+    // Check onboarding state and business suspension (only for app routes, never admin routes)
     if (isAppRoute && !isAdminRoute) {
+      const isSuspendedPath = pathname === '/app/suspended' || pathname === '/suspended'
+      const isOnboardingPath = pathname === '/app/onboarding' || pathname === '/onboarding'
+
       const activeBusiness = request.cookies.get('active_business_id')
-      if (!activeBusiness && pathname !== '/app/onboarding' && pathname !== '/onboarding') {
+
+      if (!activeBusiness && !isOnboardingPath && !isSuspendedPath) {
+        // No active business cookie — look up membership
         const { data: member } = await supabase
           .from('business_members')
-          .select('business_id')
+          .select('business_id, businesses!inner(status)')
           .eq('user_id', user.id)
           .limit(1)
           .single()
-        
+
         if (!member) {
           url.pathname = url.hostname.startsWith('app.') ? '/onboarding' : '/app/onboarding'
           return NextResponse.redirect(url)
-        } else {
-          supabaseResponse.cookies.set('active_business_id', member.business_id)
         }
-      } else if (activeBusiness && (pathname === '/app/onboarding' || pathname === '/onboarding')) {
-        url.pathname = url.hostname.startsWith('app.') ? '/dashboard' : '/app/dashboard'
-        return NextResponse.redirect(url)
+
+        const bizStatus = (member.businesses as any)?.status
+        if (bizStatus !== 'active') {
+          url.pathname = url.hostname.startsWith('app.') ? '/suspended' : '/app/suspended'
+          return NextResponse.redirect(url)
+        }
+
+        supabaseResponse.cookies.set('active_business_id', member.business_id)
+      } else if (activeBusiness && !isSuspendedPath) {
+        // Cookie present — verify business is still active on every request
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('status')
+          .eq('id', activeBusiness.value)
+          .single()
+
+        const bizStatus = biz?.status
+        if (bizStatus !== 'active') {
+          // Clear the stale cookie and redirect
+          const response = NextResponse.redirect(
+            new URL(url.hostname.startsWith('app.') ? '/suspended' : '/app/suspended', request.url)
+          )
+          response.cookies.delete('active_business_id')
+          return response
+        }
+
+        if (isOnboardingPath) {
+          url.pathname = url.hostname.startsWith('app.') ? '/dashboard' : '/app/dashboard'
+          return NextResponse.redirect(url)
+        }
       }
     }
   }

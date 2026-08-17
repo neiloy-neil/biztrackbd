@@ -5,8 +5,9 @@ import { processPOSSale, POSCartItem, POSPayment } from '@/domains/pos/actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Plus, Minus, Trash2, ShoppingCart, ArrowLeft, Printer, CheckCircle2, Loader2, User, Edit2 } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, ShoppingCart, ArrowLeft, Printer, CheckCircle2, Loader2, User, Edit2, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
+import { useOfflineSync } from '@/components/providers/OfflineSyncProvider'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -44,6 +45,9 @@ export default function POSClient({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
   const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+
+  // Offline sync hook
+  const { isOnline, pendingCount, failedCount, isSyncing, retryFailed, clearFailed } = useOfflineSync()
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -112,12 +116,10 @@ export default function POSClient({
     if (cart.length === 0) return
     setLoading(true)
 
-    // Prepare payload
+    // Prepare payload — only product_id + quantity; prices are authoritative on the server
     const items: POSCartItem[] = cart.map(item => ({
       product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      subtotal: item.subtotal
+      quantity: item.quantity
     }))
 
     const payments: POSPayment[] = []
@@ -136,9 +138,7 @@ export default function POSClient({
     
     const payload = {
       party_id: selectedCustomerId || undefined,
-      total_amount: cartTotal,
-      subtotal: cartSubtotal,
-      discount: discount,
+      discount,
       notes: 'POS Sale',
       items,
       payments,
@@ -291,6 +291,46 @@ export default function POSClient({
             />
           </div>
         </div>
+
+        {/* Offline Sync Indicator */}
+        {!isOnline && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-sm">
+            <div className="flex items-center text-amber-700 font-medium">
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              You are offline. Sales will be saved locally.
+            </div>
+          </div>
+        )}
+        {isOnline && pendingCount > 0 && (
+          <div className="bg-indigo-50 border-b border-indigo-200 px-4 py-2 flex items-center justify-between text-sm">
+            <div className="flex items-center text-indigo-700 font-medium">
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {isSyncing ? 'Syncing...' : `${pendingCount} offline sale${pendingCount !== 1 ? 's' : ''} pending sync`}
+            </div>
+          </div>
+        )}
+        {failedCount > 0 && (
+          <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 flex items-center justify-between text-sm">
+            <div className="flex items-center text-rose-700 font-medium">
+              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+              {failedCount} sale{failedCount !== 1 ? 's' : ''} failed to sync
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={retryFailed}
+                className="flex items-center gap-1 text-rose-700 hover:text-rose-900 font-medium"
+              >
+                <RefreshCw className="w-3 h-3" /> Retry
+              </button>
+              <button
+                onClick={clearFailed}
+                className="flex items-center gap-1 text-rose-500 hover:text-rose-700"
+              >
+                <X className="w-3 h-3" /> Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

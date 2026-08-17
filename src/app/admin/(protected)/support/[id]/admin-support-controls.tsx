@@ -6,6 +6,7 @@ import { updateTicketStatus, assignTicket } from '@/domains/support/actions'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function AdminSupportControls({ 
   ticketId, 
@@ -35,7 +36,7 @@ export default function AdminSupportControls({
       router.refresh()
     } catch (err) {
       console.error(err)
-      alert('Failed to update ticket')
+      toast.error('Failed to update ticket')
     } finally {
       setLoading(false)
     }

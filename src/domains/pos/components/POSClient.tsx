@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Search, Plus, Minus, Trash2, ShoppingCart, ArrowLeft, Printer, CheckCircle2, Loader2, User, Edit2, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
 import { useOfflineSync } from '@/components/providers/OfflineSyncProvider'
+import { toast } from 'sonner'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -157,7 +158,7 @@ export default function POSClient({
         setCheckoutOpen(false)
         setReceiptMode(true)
       } else {
-        alert(res.error)
+        toast.error(res.error || 'Sale failed. Please try again.')
       }
     } catch (err: any) {
       const isNetworkError = err.message === 'OFFLINE' || err.message.includes('fetch') || err.message.includes('Network') || err.message.includes('Failed to fetch')
@@ -175,7 +176,7 @@ export default function POSClient({
         setCheckoutOpen(false)
         setReceiptMode(true)
       } else {
-        alert('An unexpected error occurred.')
+        toast.error('An unexpected error occurred.')
       }
     }
     setLoading(false)

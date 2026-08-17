@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Plus, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -28,12 +29,13 @@ export default function CreateFlagForm() {
     setLoading(true)
     try {
       await createFeatureFlag({ id, description, isGlobalEnabled: isGlobal })
+      toast.success(`Flag "${id}" created`)
       setOpen(false)
       setId('')
       setDescription('')
       setIsGlobal(false)
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to create flag')
     } finally {
       setLoading(false)
     }

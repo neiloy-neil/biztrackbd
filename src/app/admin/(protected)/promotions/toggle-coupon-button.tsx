@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Switch } from '@/components/ui/switch'
 import { toggleCouponActive } from '@/domains/admin/promotions'
+import { toast } from 'sonner'
 
 export default function ToggleCouponButton({ couponId, isActive }: { couponId: string, isActive: boolean }) {
   const router = useRouter()
@@ -16,7 +17,7 @@ export default function ToggleCouponButton({ couponId, isActive }: { couponId: s
       router.refresh()
     } catch (err: any) {
       console.error(err)
-      alert(err.message)
+      toast.error(err.message || 'Failed to toggle coupon')
     } finally {
       setLoading(false)
     }

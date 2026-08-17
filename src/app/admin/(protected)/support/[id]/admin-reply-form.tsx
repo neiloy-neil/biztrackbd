@@ -5,6 +5,7 @@ import { adminReplyToTicket } from '@/domains/support/actions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Paperclip, Lock, Eye } from 'lucide-react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -44,7 +45,7 @@ export default function AdminTicketReplyForm({ ticketId }: { ticketId: string })
       setFile(null)
     } catch (err: any) {
       console.error(err)
-      alert('Failed to send reply: ' + (err.message || 'Unknown error'))
+      toast.error('Failed to send reply: ' + (err.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }

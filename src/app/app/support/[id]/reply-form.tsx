@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Paperclip } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export default function TicketReplyForm({ ticketId, businessId, userId }: { ticketId: string, businessId: string, userId: string }) {
   const [message, setMessage] = useState('')
@@ -38,7 +39,7 @@ export default function TicketReplyForm({ ticketId, businessId, userId }: { tick
       setFile(null)
     } catch (err) {
       console.error(err)
-      alert('Failed to send reply')
+      toast.error('Failed to send reply')
     } finally {
       setLoading(false)
     }

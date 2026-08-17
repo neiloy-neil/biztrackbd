@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { extendTrial, grantPromotionalCredit } from '@/domains/admin/promotions'
 import { CalendarPlus, Coins, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -26,10 +27,11 @@ export function ExtendTrialButton({ businessId }: { businessId: string }) {
     const days = parseInt(new FormData(e.currentTarget).get('days') as string)
     try {
       await extendTrial({ businessId, days })
+      toast.success('Trial extended successfully')
       setOpen(false)
       router.refresh()
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to extend trial')
     } finally {
       setLoading(false)
     }
@@ -81,10 +83,11 @@ export function GrantCreditButton({ businessId }: { businessId: string }) {
         amount: parseFloat(formData.get('amount') as string),
         reason: formData.get('reason') as string
       })
+      toast.success('Credit granted successfully')
       setOpen(false)
       router.refresh()
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to grant credit')
     } finally {
       setLoading(false)
     }

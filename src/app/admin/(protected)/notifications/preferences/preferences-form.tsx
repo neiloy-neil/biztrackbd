@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 const NOTIFICATION_TYPES = [
   { id: 'business_created', label: 'New Business Created', description: 'When a new tenant signs up.' },
@@ -47,9 +48,9 @@ export default function PreferencesForm({
     setLoading(true)
     try {
       await updateNotificationPreferences({ emailNotifications: emailEnabled, mutedTypes })
-      alert('Preferences saved successfully.')
+      toast.success('Preferences saved successfully.')
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to save preferences')
     } finally {
       setLoading(false)
     }

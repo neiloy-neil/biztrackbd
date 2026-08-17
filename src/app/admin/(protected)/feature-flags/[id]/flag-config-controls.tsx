@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Building, User, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function GlobalToggle({ flagId, isGlobalEnabled }: { flagId: string, isGlobalEnabled: boolean }) {
   const [loading, setLoading] = useState(false)
@@ -18,7 +19,7 @@ export function GlobalToggle({ flagId, isGlobalEnabled }: { flagId: string, isGl
     try {
       await toggleGlobalFeatureFlag({ id: flagId, isGlobalEnabled: checked })
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to update flag')
     } finally {
       setLoading(false)
     }
@@ -46,7 +47,7 @@ export function PlanEntitlements({ flagId, plans, activePlanIds }: { flagId: str
     try {
       await setFlagPlanEntitlement({ flagId, planId, enabled: checked })
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to update plan entitlement')
     } finally {
       setLoadingPlan(null)
     }
@@ -97,7 +98,7 @@ export function FlagOverrides({ flagId, overrides }: { flagId: string, overrides
       await addFlagOverride({ flagId, targetType, targetId, isEnabled })
       setTargetId('')
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to add override')
     } finally {
       setLoading(false)
     }
@@ -108,7 +109,7 @@ export function FlagOverrides({ flagId, overrides }: { flagId: string, overrides
     try {
       await removeFlagOverride({ overrideId: id, flagId })
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || 'Failed to remove override')
     } finally {
       setRemovingId(null)
     }

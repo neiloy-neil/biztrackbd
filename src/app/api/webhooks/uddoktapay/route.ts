@@ -20,10 +20,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { invoice_id, status, amount } = payload
+  const { invoice_id, status, amount, metadata } = payload
 
   if (!invoice_id || !status) {
     return NextResponse.json({ error: 'Missing invoice_id or status' }, { status: 400 })
+  }
+
+  // extract our internal invoice ID from metadata
+  const internalInvoiceId = metadata?.invoice_id
+
+  if (!internalInvoiceId) {
+    console.error('Webhook missing internal invoice_id in metadata', payload)
+    // Return 200 so UddoktaPay stops retrying (we can't process it anyway)
+    return NextResponse.json({ received: true, reason: 'missing_internal_invoice_id' })
   }
 
   // ── 2. Atomic + idempotent processing via DB RPC ───────────
@@ -31,9 +40,10 @@ export async function POST(req: Request) {
   // it is already paid (idempotent), then atomically updates the
   // invoice and advances the subscription period.
   const { data: result, error } = await supabaseAdmin.rpc('process_payment_webhook', {
-    p_uddoktapay_invoice_id: invoice_id,
-    p_status:                status,
-    p_amount:                Number(amount) || 0,
+    p_internal_invoice_id: internalInvoiceId,
+    p_gateway_event_id:    invoice_id,
+    p_status:              status,
+    p_amount:              Number(amount) || 0,
   })
 
   if (error) {

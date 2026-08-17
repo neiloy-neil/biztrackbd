@@ -38,7 +38,7 @@ export function Hero() {
             className="flex flex-col items-center justify-center gap-4 pt-4"
           >
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
-              <Link href="/signup" className="w-full sm:w-auto">
+              <Link href="/app/onboarding" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg px-8 h-14 rounded-full font-bold shadow-lg shadow-indigo-600/20">
                   ফ্রি শুরু করুন
                   <ArrowRight className="ml-2 w-5 h-5" />

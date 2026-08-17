@@ -60,13 +60,14 @@ export async function changePlanAction(formData: FormData) {
 
   // Compare prices
   const { data: newPlan } = await supabase.from('plans').select('price_monthly').eq('id', planId).single()
-  const { data: sub } = await supabase.from('subscriptions').select('plans(price_monthly)').eq('business_id', businessId).single()
-  
-  if (!newPlan || !sub) throw new Error('Could not verify plans')
+  if (!newPlan) throw new Error('Plan not found')
 
-  const currentPrice = Array.isArray(sub.plans) ? sub.plans[0]?.price_monthly : (sub.plans as any)?.price_monthly;
+  const { data: sub } = await supabase.from('subscriptions').select('plans(price_monthly)').eq('business_id', businessId).maybeSingle()
+  const currentPrice = sub
+    ? (Array.isArray(sub.plans) ? sub.plans[0]?.price_monthly : (sub.plans as any)?.price_monthly) ?? 0
+    : 0
 
-  if (newPlan.price_monthly >= (currentPrice || 0)) {
+  if (newPlan.price_monthly >= currentPrice) {
     // UPGRADE: Immediate charge
     return startCheckoutAction(formData)
   } else {

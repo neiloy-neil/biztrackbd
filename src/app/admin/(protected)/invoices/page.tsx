@@ -1,11 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
-import { FileText, Eye, Search, Filter } from 'lucide-react'
+import { FileText, Search, Filter } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export default async function AdminInvoicesPage() {
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: adminData } = await supabase.from('platform_admins').select('id').eq('user_id', user.id).single()
+  if (!adminData) redirect('/app/dashboard')
 
   // Fetch all invoices
   const { data: invoices, error } = await supabase

@@ -33,8 +33,7 @@ export async function createPlatformNotification(
     title,
     message,
     target_url: targetUrl || null,
-    metadata: metadata || null,
-    is_read: false
+    metadata: metadata || null
   })
 
   if (error) {
@@ -45,12 +44,11 @@ export async function createPlatformNotification(
   revalidatePath('/admin/notifications')
 }
 
-export const markNotificationAsRead = adminAction(async (notificationId: string) => {
+export const markNotificationAsRead = adminAction(async (notificationId: string, ctx) => {
   const adminSupabase = getAdminSupabase()
   
-  const { error } = await adminSupabase.from('platform_notifications')
-    .update({ is_read: true })
-    .eq('id', notificationId)
+  const { error } = await adminSupabase.from('admin_notification_reads')
+    .upsert({ admin_id: ctx.userId, notification_id: notificationId, read_at: new Date().toISOString() })
 
   if (error) return { success: false, error: error.message }
   
@@ -58,12 +56,21 @@ export const markNotificationAsRead = adminAction(async (notificationId: string)
   return { success: true, data: null }
 })
 
-export const markAllNotificationsAsRead = adminAction(async (_params: void) => {
+export const markAllNotificationsAsRead = adminAction(async (_params: void, ctx) => {
   const adminSupabase = getAdminSupabase()
   
-  const { error } = await adminSupabase.from('platform_notifications')
-    .update({ is_read: true })
-    .eq('is_read', false)
+  // Find all platform notifications
+  const { data: allNotifs } = await adminSupabase.from('platform_notifications').select('id')
+  if (!allNotifs || allNotifs.length === 0) return { success: true, data: null }
+
+  // Bulk insert reads
+  const reads = allNotifs.map(n => ({
+    admin_id: ctx.userId,
+    notification_id: n.id,
+    read_at: new Date().toISOString()
+  }))
+
+  const { error } = await adminSupabase.from('admin_notification_reads').upsert(reads, { onConflict: 'admin_id,notification_id' })
 
   if (error) return { success: false, error: error.message }
   

@@ -19,7 +19,7 @@ export const getStaffList = authAction(async (data: void, ctx) => {
 
 // 2. Add Staff (Requires 'staff.manage' permission)
 export const addStaff = requirePermission('staff.manage', authAction(async (data: { phone: string, role: string }, ctx) => {
-  const canAddStaff = await canUseFeature(ctx.businessId, 'staff_limit')
+  const canAddStaff = await canUseFeature(ctx.businessId, 'max_users')
   if (!canAddStaff) {
     return { success: false, error: 'Upgrade required: You have reached the maximum number of staff members for your current plan.' }
   }

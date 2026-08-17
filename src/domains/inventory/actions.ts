@@ -109,6 +109,13 @@ export const recordMovement = authAction(async (data: {
   quantity: number,
   reason?: string
 }, ctx) => {
+  if (data.type === 'in' || data.type === 'out') {
+    if (data.quantity <= 0) return { success: false, error: 'Quantity must be positive for in/out.' }
+  } else if (data.type === 'adjustment') {
+    if (data.quantity === 0) return { success: false, error: 'Adjustment quantity cannot be zero.' }
+    if (!data.reason || data.reason.trim() === '') return { success: false, error: 'Reason is required for adjustments.' }
+  }
+
   const supabase = await createClient()
 
   // Verify product belongs to business

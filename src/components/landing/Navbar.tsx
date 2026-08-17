@@ -25,10 +25,10 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden sm:block">
+          <Link href="/app/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden sm:block">
             লগইন
           </Link>
-          <Link href="/signup">
+          <Link href="/app/onboarding">
             <Button className="bg-indigo-600 hover:bg-indigo-700">ফ্রি শুরু করুন</Button>
           </Link>
         </div>

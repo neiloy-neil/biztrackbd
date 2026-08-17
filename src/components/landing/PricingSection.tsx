@@ -83,7 +83,7 @@ export async function PricingSection() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Link href="/signup" className="w-full">
+                  <Link href="/app/onboarding" className="w-full">
                     <Button className={`w-full ${isRecommended ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
                       {plan.price_monthly === 0 ? 'ফ্রি শুরু করুন' : 'প্যাকেজটি বেছে নিন'}
                     </Button>

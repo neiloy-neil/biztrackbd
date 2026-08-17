@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Supabase Admin Client — uses the SERVICE_ROLE key.
@@ -20,4 +21,37 @@ export async function createAdminClient() {
       persistSession: false,
     },
   })
+}
+
+/**
+ * Logs a sensitive read action by a Platform Admin.
+ * MUST be called with an AUTHENTICATED client (not service_role)
+ * so that auth.uid() is properly resolved in PostgreSQL.
+ */
+export async function logSensitiveRead(
+  authClient: SupabaseClient, 
+  targetType: string, 
+  targetId: string, 
+  actionDesc: string
+) {
+  try {
+    const { error } = await authClient.rpc('log_sensitive_read', {
+      target_type: targetType,
+      target_id: targetId,
+      action_desc: actionDesc
+    })
+    if (error) console.error('Failed to log sensitive read:', error)
+  } catch (err) {
+    console.error('Exception logging sensitive read:', err)
+  }
+}
+
+/**
+ * Logs a Super Admin Impersonation event.
+ */
+export async function logAdminImpersonation(
+  authClient: SupabaseClient, 
+  targetBusinessId: string
+) {
+  await logSensitiveRead(authClient, 'business', targetBusinessId, 'admin_impersonation')
 }

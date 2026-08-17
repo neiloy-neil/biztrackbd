@@ -7,12 +7,16 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, Drawer
 import { Button } from '@/components/ui/button'
 
 import { useState } from 'react'
+import { useKeyboard } from '@/hooks/useKeyboard'
 
 export function MobileNav() {
   const pathname = usePathname() || ''
   const [open, setOpen] = useState(false)
+  const isKeyboardOpen = useKeyboard()
 
   if (pathname === '/app/login' || pathname === '/app/pos' || pathname.startsWith('/admin')) return null
+  
+  if (isKeyboardOpen) return null
 
   const normalizedPath = pathname.replace(/^\/app/, '') || '/'
 

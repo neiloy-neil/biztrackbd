@@ -27,19 +27,35 @@ export default async function AdminNotificationsPage({
     .from('platform_notifications')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(100)
-
-  if (filter === 'unread') {
-    dbQuery = dbQuery.eq('is_read', false)
-  } else if (filter === 'read') {
-    dbQuery = dbQuery.eq('is_read', true)
-  }
+    .limit(300)
 
   if (priorityFilter) {
     dbQuery = dbQuery.eq('priority', priorityFilter)
   }
 
-  const { data: notifications } = await dbQuery
+  const { data: rawNotifications } = await dbQuery
+
+  // Fetch read status for this specific admin
+  const { data: reads } = await supabase
+    .from('admin_notification_reads')
+    .select('notification_id')
+    .eq('admin_id', user.id)
+
+  const readIds = new Set(reads?.map(r => r.notification_id) || [])
+
+  let notifications = rawNotifications?.map(n => ({
+    ...n,
+    is_read: readIds.has(n.id)
+  })) || []
+
+  // Apply read/unread filter in memory
+  if (filter === 'unread') {
+    notifications = notifications.filter(n => !n.is_read)
+  } else if (filter === 'read') {
+    notifications = notifications.filter(n => n.is_read)
+  }
+  
+  notifications = notifications.slice(0, 100)
 
   // Also fetch preferences to know if they muted anything
   const { data: preferences } = await supabase

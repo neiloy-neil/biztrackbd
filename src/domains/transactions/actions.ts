@@ -9,7 +9,7 @@ import { canUseFeature } from '@/domains/saas/entitlements'
 export const createTransaction = idempotentAction(async (data: {
   type: 'sale' | 'expense' | 'payment_in' | 'payment_out',
   amount: number,
-  account_id: string,
+  account_id?: string,
   category?: string,
   party_id?: string,
   new_party_name?: string,
@@ -35,16 +35,18 @@ export const createTransaction = idempotentAction(async (data: {
 
   const supabase = await createClient()
 
-  // First, verify the account belongs to the business
-  const { data: account, error: accError } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('id', data.account_id)
-    .eq('business_id', ctx.businessId)
-    .single()
+  // Verify account only when one is provided (credit/due sales have no account)
+  if (data.account_id) {
+    const { data: account, error: accError } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('id', data.account_id)
+      .eq('business_id', ctx.businessId)
+      .single()
 
-  if (accError || !account) {
-    return { success: false, error: 'Invalid payment account.' }
+    if (accError || !account) {
+      return { success: false, error: 'Invalid payment account.' }
+    }
   }
 
   // Get the default branch
@@ -58,7 +60,7 @@ export const createTransaction = idempotentAction(async (data: {
   if (!branch) {
     return { success: false, error: 'Branch not found.' }
   }
-  
+
   let finalPartyId = data.party_id || null
 
   // Auto-create new party if requested
@@ -72,7 +74,7 @@ export const createTransaction = idempotentAction(async (data: {
       })
       .select('id')
       .single()
-      
+
     if (partyError) {
       return { success: false, error: 'Failed to create new party.' }
     }
@@ -84,7 +86,7 @@ export const createTransaction = idempotentAction(async (data: {
     p_branch_id: branch.id,
     p_type: data.type,
     p_total_amount: data.amount,
-    p_account_id: data.account_id,
+    p_account_id: data.account_id || null,
     p_party_id: finalPartyId,
     p_category: data.category || null,
     p_notes: data.notes || null,
@@ -157,4 +159,58 @@ export const getTransactionAudit = authAction(async (data: { id: string }, ctx) 
   
   if (error) return { success: false, error: error.message }
   return { success: true, data: audit }
+})
+
+export const createTransfer = idempotentAction(async (data: {
+  amount: number,
+  from_account_id: string,
+  to_account_id: string,
+  notes?: string
+}, ctx) => {
+  if (data.amount <= 0) {
+    return { success: false, error: 'Amount must be greater than zero.' }
+  }
+  if (data.from_account_id === data.to_account_id) {
+    return { success: false, error: 'Source and destination accounts must be different.' }
+  }
+
+  // Permission Check
+  if (!hasPermission(ctx.role, 'expenses.create')) {
+    // Assuming transfer needs similar privileges to expenses or sales
+    return { success: false, error: 'Permission Denied: Requires management privileges' }
+  }
+
+  const supabase = await createClient()
+
+  // Get the default branch
+  const { data: branch } = await supabase
+    .from('branches')
+    .select('id')
+    .eq('business_id', ctx.businessId)
+    .limit(1)
+    .single()
+
+  if (!branch) {
+    return { success: false, error: 'Branch not found.' }
+  }
+
+  const { data: transactionId, error: txnError } = await supabase.rpc('create_transfer_atomic', {
+    p_business_id: ctx.businessId,
+    p_branch_id: branch.id,
+    p_amount: data.amount,
+    p_from_account_id: data.from_account_id,
+    p_to_account_id: data.to_account_id,
+    p_notes: data.notes || null,
+    p_created_by: ctx.userId
+  })
+
+  if (txnError) {
+    console.error('Failed to create transfer:', txnError)
+    return { success: false, error: 'Transfer failed: ' + txnError.message }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/transactions')
+  
+  return { success: true, data: { id: transactionId } }
 })

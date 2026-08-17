@@ -1,9 +1,15 @@
 import { CreditCard, Check, X, Building } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
+import { redirect } from 'next/navigation'
 
 export default async function AdminBillingPage() {
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: adminData } = await supabase.from('platform_admins').select('id').eq('user_id', user.id).single()
+  if (!adminData) redirect('/app/dashboard')
 
   // Fetch all plans
   const { data: plans } = await supabase

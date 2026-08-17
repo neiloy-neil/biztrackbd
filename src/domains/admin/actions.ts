@@ -10,6 +10,9 @@ export const getPlatformMetrics = adminAction(async (_params: void) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_metrics_summary')
   if (error) return { success: false, error: error.message }
+  
+  await logSensitiveRead(supabase, 'system', 'all', 'viewed_platform_metrics')
+  
   return { success: true, data }
 })
 
@@ -17,6 +20,9 @@ export const getPlatformGrowth = adminAction(async (_params: void) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_growth_data')
   if (error) return { success: false, error: error.message }
+  
+  await logSensitiveRead(supabase, 'system', 'all', 'viewed_platform_growth')
+  
   return { success: true, data }
 })
 
@@ -35,6 +41,8 @@ export const fetchBusinessesList = adminAction(async (params: { searchQuery?: st
   return { success: true, data: data || [] }
 })
 
+import { logSensitiveRead } from '@/lib/supabase/admin'
+
 export const fetchBusinessDetail = adminAction(async (params: { businessId: string }) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_business_detail', {
@@ -45,6 +53,10 @@ export const fetchBusinessDetail = adminAction(async (params: { businessId: stri
     console.error('Error fetching business detail:', error)
     return { success: false, error: error.message }
   }
+  
+  // Auditable event: Super admin read sensitive business data
+  await logSensitiveRead(supabase, 'business', params.businessId, 'viewed_business_detail')
+
   return { success: true, data }
 })
 

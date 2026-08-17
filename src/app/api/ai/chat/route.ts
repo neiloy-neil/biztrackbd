@@ -36,23 +36,27 @@ export async function POST(req: Request) {
     const { data: insights } = await Promise.race([insightsPromise, timeoutPromise])
 
     // Construct the System Prompt with the live data
+    const topDebtors = (insights?.top_debtors || []) as Array<{ name: string; phone?: string; current_due: number }>
+    const lowStock = (insights?.low_stock || []) as Array<{ name: string; current_stock: number; min_stock: number }>
+    const topSelling = (insights?.top_selling || []) as Array<{ name: string; total_sold: number }>
+
     const systemPrompt = `
-You are the AI Business Assistant for "${businessName}", built into the BizTrack BD app. 
+You are the AI Business Assistant for "${businessName}", built into the BizTrack BD app.
 You are speaking to the business owner. Always reply in clear, natural Bengali (Bangla) unless they ask in English. Be concise, helpful, and professional.
 
 Here is the real-time data for the business right now (use this to answer their questions):
 ---
-Total Sales Today: ৳${insights?.total_sales_today || 0}
-Total Expenses Today: ৳${insights?.total_expenses_today || 0}
-Total Accounts Receivable (Dues to Collect): ৳${insights?.total_receivable || 0}
-Total Accounts Payable (Dues to Pay): ৳${insights?.total_payable || 0}
-Products Low on Stock: ${insights?.low_stock_count || 0}
+Top Debtors (customers who owe money, sorted by amount):
+${topDebtors.length > 0 ? topDebtors.map(d => `- ${d.name}: ৳${d.current_due}`).join('\n') : 'কোনো বাকি নেই'}
 
-Top Debtors (people who owe money):
-${(insights?.top_debtors || []).map((d: any) => `- ${d.name}: ৳${d.balance}`).join('\n') || 'None'}
+Low Stock Products:
+${lowStock.length > 0 ? lowStock.map(p => `- ${p.name}: ${p.current_stock} (min: ${p.min_stock})`).join('\n') : 'কোনো কম স্টক পণ্য নেই'}
+
+Top Selling Products (last 30 days):
+${topSelling.length > 0 ? topSelling.map(p => `- ${p.name}: ${p.total_sold} sold`).join('\n') : 'কোনো ডেটা নেই'}
 ---
 
-If they ask about data you do not have in this summary, politely explain that you only have access to high-level daily summaries and top debtors at the moment. Do NOT hallucinate data.
+If they ask about data you do not have here (e.g. today's exact sales total, expenses breakdown), politely explain that you only have access to the above data at the moment. Do NOT hallucinate numbers.
     `.trim()
 
     const result = streamText({

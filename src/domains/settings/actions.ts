@@ -49,7 +49,7 @@ export const updateBusinessProfile = authAction(async (
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')
   revalidatePath('/app/settings/business')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 // ── Accounts ──────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ export const createAccount = authAction(async (
   })
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const updateAccount = authAction(async (
@@ -94,7 +94,7 @@ export const updateAccount = authAction(async (
     .eq('business_id', ctx.businessId)
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const deleteAccount = authAction(async (
@@ -119,7 +119,7 @@ export const deleteAccount = authAction(async (
     .eq('business_id', ctx.businessId)
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 // 1. Get Staff List

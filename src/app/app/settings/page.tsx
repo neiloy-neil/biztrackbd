@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { LogOut, Settings as SettingsIcon, Store, CreditCard, HeadphonesIcon } from 'lucide-react'
+import { LogOut, Settings as SettingsIcon, Store, CreditCard, HeadphonesIcon, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppLink as Link } from '@/components/AppLink'
 import { cn } from '@/lib/utils'
 import { LogoutButton } from '@/domains/auth/components/LogoutButton'
+import { AccountsClient } from '@/domains/settings/components/AccountsClient'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -35,6 +36,18 @@ export default async function SettingsPage() {
             <Link href="/settings/profile" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>প্রোফাইল আপডেট</Link>
             <Link href="/settings/staff" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>স্টাফ ম্যানেজমেন্ট</Link>
             <Link href="/reports" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>রিপোর্টস (Reports)</Link>
+            <Link href="/app/insights" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>স্মার্ট ইনসাইটস (Insights)</Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-slate-500" /> অ্যাকাউন্ট (Accounts)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AccountsClient />
           </CardContent>
         </Card>
 

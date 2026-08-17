@@ -2,9 +2,80 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { authAction, requirePermission } from '@/lib/actions/safe-action'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
 import { canUseFeature } from '@/domains/saas/entitlements'
+
+// ── Accounts ──────────────────────────────────────────────────────────────────
+
+export const getAccountsWithBalance = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  const { data: accounts, error } = await supabase
+    .from('accounts')
+    .select('id, name, type, current_balance')
+    .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
+    .order('type')
+    .order('name')
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: accounts }
+})
+
+export const createAccount = authAction(async (
+  data: { name: string; type: string },
+  ctx
+) => {
+  const supabase = await createClient()
+  const { error } = await supabase.from('accounts').insert({
+    business_id: ctx.businessId,
+    name: data.name.trim(),
+    type: data.type,
+  })
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  return { success: true }
+})
+
+export const updateAccount = authAction(async (
+  data: { id: string; name: string },
+  ctx
+) => {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('accounts')
+    .update({ name: data.name.trim(), updated_at: new Date().toISOString() })
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  return { success: true }
+})
+
+export const deleteAccount = authAction(async (
+  data: { id: string },
+  ctx
+) => {
+  const supabase = await createClient()
+  // Only allow deletion if current_balance is zero (soft-delete)
+  const { data: acc, error: fetchErr } = await supabase
+    .from('accounts')
+    .select('current_balance')
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+    .single()
+  if (fetchErr || !acc) return { success: false, error: 'Account not found.' }
+  if (Number(acc.current_balance) !== 0)
+    return { success: false, error: 'ব্যালেন্স শূন্য না হলে মুছে ফেলা যাবে না।' }
+  const { error } = await supabase
+    .from('accounts')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  return { success: true }
+})
 
 // 1. Get Staff List
 export const getStaffList = authAction(async (data: void, ctx) => {
@@ -18,10 +89,10 @@ export const getStaffList = authAction(async (data: void, ctx) => {
 })
 
 // 2. Add Staff (Requires 'staff.manage' permission)
-export const addStaff = requirePermission('staff.manage', authAction(async (data: { phone: string, role: string }, ctx) => {
+export const addStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(async (data: { phone: string, role: string }, ctx) => {
   const canAddStaff = await canUseFeature(ctx.businessId, 'max_users')
   if (!canAddStaff) {
-    return { success: false, error: 'Upgrade required: You have reached the maximum number of staff members for your current plan.' }
+    return { success: false, error: 'Maximum staff limit reached for your plan' }
   }
 
   const supabase = await createClient()
@@ -50,7 +121,7 @@ export const addStaff = requirePermission('staff.manage', authAction(async (data
 }))
 
 // 3. Update Staff Role (Requires 'staff.manage' permission)
-export const updateStaffRole = requirePermission('staff.manage', authAction(async (data: { user_id: string, new_role: string }, ctx) => {
+export const updateStaffRole = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(async (data: { user_id: string, new_role: string }, ctx) => {
   const supabase = await createClient()
 
   const { data: result, error } = await supabase.rpc('update_staff_role', { 
@@ -72,7 +143,7 @@ export const updateStaffRole = requirePermission('staff.manage', authAction(asyn
 }))
 
 // 4. Remove Staff (Requires 'staff.manage' permission)
-export const removeStaff = requirePermission('staff.manage', authAction(async (data: { user_id: string }, ctx) => {
+export const removeStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(async (data: { user_id: string }, ctx) => {
   const supabase = await createClient()
 
   const { data: result, error } = await supabase.rpc('remove_staff', { 

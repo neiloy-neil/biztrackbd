@@ -12,6 +12,7 @@ export const getParties = authAction(async (data: { type?: 'customer' | 'supplie
     .from('v_party_balances')
     .select('*')
     .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
 
   if (data.type) {
     if (data.type === 'both') {
@@ -59,6 +60,31 @@ export const getPartyTransactions = authAction(async (data: { id: string }, ctx)
   if (error) return { success: false, error: error.message }
   return { success: true, data: transactions }
 })
+
+export const deleteParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authAction(async (data: { id: string }, ctx) => {
+  const supabase = await createClient()
+
+  const { data: party, error: fetchErr } = await supabase
+    .from('parties')
+    .select('current_due')
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (fetchErr || !party) return { success: false, error: 'Party not found.' }
+  if (Number(party.current_due) !== 0)
+    return { success: false, error: 'বাকি শূন্য না হলে মুছে ফেলা যাবে না।' }
+
+  const { error } = await supabase
+    .from('parties')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/parties')
+  return { success: true, data: null }
+}))
 
 // PERM-04: Only owner/manager with customers.manage or suppliers.manage can create parties
 export const createParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authAction(async (data: {

@@ -1,12 +1,14 @@
 import { Suspense } from 'react'
-import { getParty, getPartyTransactions } from '@/domains/parties/actions'
+import { getParty, getPartyTransactions, deleteParty } from '@/domains/parties/actions'
 import { getAccounts } from '@/domains/transactions/actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { MessageCircle, ArrowLeft, FileText } from 'lucide-react'
+import { MessageCircle, ArrowLeft, FileText, Trash2 } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
 import { format } from '@/lib/utils/date'
 import { PartyActionButtons } from './party-action-drawer'
+import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
+import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
 
 async function PartyDetails({ id }: { id: string }) {
   const [partyRes, accountsRes, transRes] = await Promise.all([
@@ -26,7 +28,7 @@ async function PartyDetails({ id }: { id: string }) {
   const transactions = transRes?.success ? transRes.data : []
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(amount))
+    '৳' + Math.abs(isNaN(amount) ? 0 : amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 
   const isCustomer = party.type === 'customer'
   const currentDue = Number(party.current_due ?? 0)
@@ -87,6 +89,28 @@ async function PartyDetails({ id }: { id: string }) {
         )}
       </div>
 
+      {/* Delete party — only when balance is zero */}
+      {currentDue === 0 && (
+        <form
+          action={async () => {
+            'use server'
+            const res = await deleteParty({ id: party.id })
+            if (res?.success) {
+              const { redirect } = await import('next/navigation')
+              redirect('/app/parties')
+            }
+          }}
+        >
+          <button
+            type="submit"
+            className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            এই পার্টি মুছে ফেলুন
+          </button>
+        </form>
+      )}
+
       {/* Transactions List */}
       <div>
         <h3 className="text-lg font-bold text-slate-900 mb-4">{'লেনদেন বিবরণী'}</h3>
@@ -96,10 +120,11 @@ async function PartyDetails({ id }: { id: string }) {
               <div className="p-8 text-center text-slate-500">{'কোনো লেনদেন পাওয়া যায়নি'}</div>
             ) : (
               transactions.map((txn: any) => (
-                <div key={txn.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                  <div>
-                    <p className="font-medium text-slate-900">{txnLabel(txn.type)}</p>
-                    <p className="text-sm text-slate-500">
+                <div key={txn.id} className="flex flex-col hover:bg-slate-50 transition-colors">
+                  <div className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">{txnLabel(txn.type)}</p>
+                      <p className="text-sm text-slate-500">
                       {format(new Date(txn.transaction_date), 'dd MMM yyyy')}
                     </p>
                   </div>
@@ -113,7 +138,12 @@ async function PartyDetails({ id }: { id: string }) {
                     {formatCurrency(txn.total_amount)}
                   </div>
                 </div>
-              ))
+                <div className="px-4 pb-4 flex items-center justify-between bg-slate-50 border-t">
+                  <TransactionAudit transactionId={txn.id} />
+                  <VoidTransactionButton transactionId={txn.id} state={txn.state} />
+                </div>
+              </div>
+            ))
             )}
           </div>
         </Card>

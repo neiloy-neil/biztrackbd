@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.44",
+    "@ai-sdk/react": "^4.0.69",
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.9.0",
     "@radix-ui/react-label": "^2.1.15",
@@ -19,6 +23,7 @@
     "@tanstack/query-sync-storage-persister": "^5.101.4",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-persist-client": "^5.101.4",
+    "ai": "^7.0.66",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

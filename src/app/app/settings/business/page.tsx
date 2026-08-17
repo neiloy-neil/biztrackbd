@@ -32,7 +32,7 @@ const BD_DISTRICTS = [
   'চাঁপাইনবাবগঞ্জ','কুষ্টিয়া','মেহেরপুর','চুয়াডাঙ্গা','ঝিনাইদহ','মাগুরা','নড়াইল',
   'সাতক্ষীরা','যশোর','বাগেরহাট','পিরোজপুর','ঝালকাঠি','পটুয়াখালী','বরগুনা','ভোলা',
   'ঠাকুরগাঁও','পঞ্চগড়','দিনাজপুর','নীলফামারী','লালমনিরহাট','কুড়িগ্রাম','গাইবান্ধা',
-  'জামালপুর','শেরপুর','ময়মনসিংহ','কক্সবাজার','বান্দরবান','রাঙামাটি','খাগড়াছড়ি',
+  'জামালপুর','শেরপুর','কক্সবাজার','বান্দরবান','রাঙামাটি','খাগড়াছড়ি',
 ]
 
 type BusinessData = {
@@ -171,7 +171,7 @@ export default function BusinessSettingsPage() {
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 <option value="">জেলা বেছে নিন</option>
-                {BD_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                {BD_DISTRICTS.map((d, i) => <option key={`${d}-${i}`} value={d}>{d}</option>)}
               </select>
             </div>
           </CardContent>

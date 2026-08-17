@@ -13,7 +13,7 @@ export const getBusinessProfile = authAction(async (data: void, ctx) => {
   const supabase = await createClient()
   const { data: biz, error } = await supabase
     .from('businesses')
-    .select('id, name, currency, timezone')
+    .select('id, name, phone, address, district, business_type, trade_license, logo_url, currency, timezone')
     .eq('id', ctx.businessId)
     .single()
   if (error) return { success: false, error: error.message }
@@ -21,13 +21,30 @@ export const getBusinessProfile = authAction(async (data: void, ctx) => {
 })
 
 export const updateBusinessProfile = authAction(async (
-  data: { name: string; currency?: string; timezone?: string },
+  data: {
+    name: string
+    phone?: string
+    address?: string
+    district?: string
+    business_type?: string
+    trade_license?: string
+    logo_url?: string
+  },
   ctx
 ) => {
   const supabase = await createClient()
   const { error } = await supabase
     .from('businesses')
-    .update({ name: data.name.trim(), updated_at: new Date().toISOString() })
+    .update({
+      name: data.name.trim(),
+      phone: data.phone?.trim() || null,
+      address: data.address?.trim() || null,
+      district: data.district?.trim() || null,
+      business_type: data.business_type?.trim() || null,
+      trade_license: data.trade_license?.trim() || null,
+      logo_url: data.logo_url?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', ctx.businessId)
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')

@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { authAction } from '@/lib/actions/safe-action'
+import { authAction, requirePermission } from '@/lib/actions/safe-action'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
 export const getParties = authAction(async (data: { type?: 'customer' | 'supplier' | 'both', search?: string }, ctx) => {
@@ -59,7 +60,8 @@ export const getPartyTransactions = authAction(async (data: { id: string }, ctx)
   return { success: true, data: transactions }
 })
 
-export const createParty = authAction(async (data: {
+// PERM-04: Only owner/manager with customers.manage or suppliers.manage can create parties
+export const createParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authAction(async (data: {
   type: 'customer' | 'supplier' | 'both',
   name: string,
   phone?: string,
@@ -82,7 +84,7 @@ export const createParty = authAction(async (data: {
     .single()
 
   if (error) return { success: false, error: error.message }
-  
+
   revalidatePath('/parties')
   return { success: true, data: party }
-})
+}))

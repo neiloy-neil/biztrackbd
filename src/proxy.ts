@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/session'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const url = request.nextUrl
   let hostname = request.headers.get('host') || ''
 

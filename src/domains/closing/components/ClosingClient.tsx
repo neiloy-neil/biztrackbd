@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { AppLink as Link } from '@/components/AppLink'
 import { cn } from '@/lib/utils'
 import { RequirePermission } from '@/hooks/usePermissions'
+import { addToOfflineQueue } from '@/lib/offline/queue'
 
 interface ClosingClientProps {
   today: string
@@ -51,11 +52,23 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
     }
 
     setIsSubmitting(true)
-    const res = await closeDay({
-      date: today,
-      actual_cash: actualCash,
-      reason: reason
-    })
+
+    const payload = { date: today, actual_cash: actualCash, reason }
+
+    if (!navigator.onLine) {
+      const idempotencyKey = `closing_${today}`
+      await addToOfflineQueue({
+        id: idempotencyKey,
+        idempotencyKey,
+        type: 'daily_closing',
+        payload,
+      })
+      setIsSubmitting(false)
+      toast.success('অফলাইনে সেভ হয়েছে — নেটওয়ার্ক ফিরলে সিঙ্ক হবে')
+      return
+    }
+
+    const res = await closeDay(payload)
     setIsSubmitting(false)
 
     if (res?.success) {

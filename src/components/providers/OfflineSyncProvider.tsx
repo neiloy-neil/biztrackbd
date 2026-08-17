@@ -87,6 +87,9 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
       } else if (txn.type === 'pos_sale') {
         const { processPOSSale } = await import('@/domains/pos/actions')
         res = await processPOSSale(txn.payload)
+      } else if (txn.type === 'daily_closing') {
+        const { closeDay } = await import('@/domains/closing/actions')
+        res = await closeDay(txn.payload)
       } else {
         res = { success: false, error: 'Unknown transaction type' }
       }

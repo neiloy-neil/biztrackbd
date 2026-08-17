@@ -12,7 +12,7 @@ export type OfflineTransactionStatus = 'pending' | 'syncing' | 'synced' | 'faile
 export type OfflineTransaction = {
   id: string
   idempotencyKey: string
-  type: 'transaction' | 'pos_sale' | 'party_payment'
+  type: 'transaction' | 'pos_sale' | 'daily_closing'
   payload: any
   status: OfflineTransactionStatus
   createdAt: string

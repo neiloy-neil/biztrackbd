@@ -5,6 +5,7 @@ import { DashboardMetrics, DashboardMetricsSkeleton } from '@/domains/dashboard/
 import { DashboardTrend } from '@/domains/dashboard/components/DashboardTrend'
 import { RecentTransactions } from '@/domains/dashboard/components/RecentTransactions'
 import { LowStockProducts } from '@/domains/dashboard/components/LowStockProducts'
+import { MoneyVisibility, MoneyVisibilitySkeleton } from '@/domains/dashboard/components/MoneyVisibility'
 import { DashboardEmptyState } from './empty-state'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
@@ -73,6 +74,10 @@ export default async function DashboardPage({
 
       <Suspense fallback={<DashboardMetricsSkeleton />}>
         <DashboardMetrics startDate={startDate} endDate={endDate} />
+      </Suspense>
+
+      <Suspense fallback={<MoneyVisibilitySkeleton />}>
+        <MoneyVisibility />
       </Suspense>
 
       <Suspense fallback={<div className="h-[250px] w-full bg-slate-100 animate-pulse rounded-xl mt-6"></div>}>

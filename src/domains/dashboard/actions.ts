@@ -76,6 +76,18 @@ export const getLowStockProducts = authAction(async (
   return { success: true, data: formattedStock }
 })
 
+export const getMoneyVisibility = authAction(async (
+  _data: object,
+  ctx
+) => {
+  const supabase = await createClient()
+  const { data: result, error } = await supabase.rpc('get_money_visibility', {
+    p_business_id: ctx.businessId
+  })
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: result }
+})
+
 export const getTrendData = authAction(async (
   data: { startDate: string, endDate: string },
   ctx

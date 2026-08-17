@@ -1,4 +1,4 @@
-import { fetchUserDetail } from '@/domains/admin/actions'
+import { fetchPlatformUserDetail } from '@/domains/admin/actions'
 import { notFound } from 'next/navigation'
 import { 
   Building2, MapPin, CreditCard, Activity, 
@@ -15,7 +15,8 @@ export default async function UserDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const data = await fetchUserDetail(id)
+  const response = await fetchPlatformUserDetail({ userId: id })
+  const data = response.success ? response.data : null
 
   if (!data || !data.user) {
     notFound()

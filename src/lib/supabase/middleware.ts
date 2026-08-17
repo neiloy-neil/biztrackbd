@@ -61,13 +61,38 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     if (isLoginPath || (isPublicPath && pathname === '/')) {
       if (isAdminRoute) {
-        url.pathname = url.hostname.startsWith('admin.') ? '/dashboard' : '/admin/dashboard'
+        // Enforce they are actually an admin before letting them go to /admin/dashboard
+        const { data: adminMember } = await supabase
+          .from('platform_admins')
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
+          
+        if (adminMember) {
+          url.pathname = url.hostname.startsWith('admin.') ? '/dashboard' : '/admin/dashboard'
+        } else {
+          url.pathname = '/app/dashboard'
+        }
       } else if (isAppRoute) {
         url.pathname = url.hostname.startsWith('app.') ? '/dashboard' : '/app/dashboard'
       } else {
         url.pathname = '/app/dashboard'
       }
       return NextResponse.redirect(url)
+    }
+
+    // Check if they are trying to access an admin route while logged in
+    if (isAdminRoute && !isLoginPath) {
+      const { data: adminMember } = await supabase
+        .from('platform_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+        
+      if (!adminMember) {
+        url.pathname = '/app/dashboard'
+        return NextResponse.redirect(url)
+      }
     }
 
     // Check if onboarding is needed (only for app routes, never admin routes)

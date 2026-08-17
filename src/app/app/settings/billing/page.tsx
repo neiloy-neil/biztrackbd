@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Check, CreditCard, AlertTriangle, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Check, CreditCard, AlertTriangle, AlertCircle, Receipt } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getEntitlements } from '@/domains/saas/entitlements'

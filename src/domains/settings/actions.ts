@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { revalidatePath } from 'next/cache'
 
+import { canUseFeature } from '@/domains/saas/entitlements'
+
 // 1. Get Staff List
 export const getStaffList = authAction(async (data: void, ctx) => {
   const supabase = await createClient()
@@ -17,6 +19,11 @@ export const getStaffList = authAction(async (data: void, ctx) => {
 
 // 2. Add Staff (Requires 'staff.manage' permission)
 export const addStaff = requirePermission('staff.manage', authAction(async (data: { phone: string, role: string }, ctx) => {
+  const canAddStaff = await canUseFeature(ctx.businessId, 'staff_limit')
+  if (!canAddStaff) {
+    return { success: false, error: 'Upgrade required: You have reached the maximum number of staff members for your current plan.' }
+  }
+
   const supabase = await createClient()
 
   const cleanPhone = data.phone.trim()

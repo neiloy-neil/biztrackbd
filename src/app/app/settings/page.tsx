@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { LogOut, Settings as SettingsIcon, Store, CreditCard } from 'lucide-react'
+import { LogOut, Settings as SettingsIcon, Store, CreditCard, HeadphonesIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppLink as Link } from '@/components/AppLink'
@@ -47,6 +47,17 @@ export default async function SettingsPage() {
           <CardContent className="space-y-2">
             <Link href="/settings/billing" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>সাবস্ক্রিপশন প্ল্যান</Link>
             <Button variant="outline" className="w-full justify-start">এসএমএস রেট (SMS Rate)</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <HeadphonesIcon className="w-5 h-5 text-slate-500" /> সাপোর্ট (Support)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Link href="/app/support" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>সাপোর্ট টিকেট (Support Tickets)</Link>
           </CardContent>
         </Card>
 

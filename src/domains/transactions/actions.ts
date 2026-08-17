@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { idempotentAction, authAction, hasPermission } from '@/lib/actions/safe-action'
 import { revalidatePath } from 'next/cache'
 
+import { canUseFeature } from '@/domains/saas/entitlements'
+
 export const createTransaction = idempotentAction(async (data: {
   type: 'sale' | 'expense' | 'payment_in' | 'payment_out',
   amount: number,
@@ -14,6 +16,11 @@ export const createTransaction = idempotentAction(async (data: {
   notes?: string,
   attachments?: string[]
 }, ctx) => {
+  const canAddTransaction = await canUseFeature(ctx.businessId, 'transaction_limit')
+  if (!canAddTransaction) {
+    return { success: false, error: 'Upgrade required: You have reached the maximum number of transactions for your current plan.' }
+  }
+
   if (data.amount <= 0) {
     return { success: false, error: 'Amount must be greater than zero.' }
   }

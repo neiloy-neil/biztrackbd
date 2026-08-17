@@ -9,16 +9,16 @@ export function ActionsMenu({ businessId, status }: { businessId: string, status
 
   const handleSuspend = async () => {
     if (!confirm('Are you sure you want to suspend this business?')) return
-    await suspendBusinessAction(businessId, 'Admin action')
+    await suspendBusinessAction({ businessId, reason: 'Admin action' })
   }
 
   const handleReactivate = async () => {
-    await reactivateBusinessAction(businessId)
+    await reactivateBusinessAction({ businessId, reason: 'Admin action' })
   }
 
   const handleDelete = async () => {
     if (!confirm('DANGER: Are you sure you want to delete this business? This action requires super admin privileges and will be strictly audited.')) return
-    await deleteBusinessAction(businessId, 'Admin deletion')
+    await deleteBusinessAction({ businessId, reason: 'Admin deletion' })
     router.push('/admin/businesses')
   }
 

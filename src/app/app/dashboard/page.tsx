@@ -5,6 +5,9 @@ import { DashboardMetrics, DashboardMetricsSkeleton } from '@/domains/dashboard/
 import { DashboardTrend } from '@/domains/dashboard/components/DashboardTrend'
 import { RecentTransactions } from '@/domains/dashboard/components/RecentTransactions'
 import { LowStockProducts } from '@/domains/dashboard/components/LowStockProducts'
+import { DashboardEmptyState } from './empty-state'
+import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 
 function getDateRange(range: string) {
   const today = new Date()
@@ -27,7 +30,6 @@ function getDateRange(range: string) {
       break
   }
 
-  // Format to YYYY-MM-DD
   const format = (d: Date) => d.toISOString().split('T')[0]
   return { startDate: format(start), endDate: format(end) }
 }
@@ -37,11 +39,26 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  // Await the searchParams promise (Next.js 15+ requirement if dealing with async searchParams, but usually standard in 14+ for dynamic rendering)
   const resolvedSearchParams = await searchParams
   const range = (resolvedSearchParams?.range as string) || 'today'
   
   const { startDate, endDate } = getDateRange(range)
+
+  const cookieStore = await cookies()
+  const businessId = cookieStore.get('active_business_id')?.value
+  let isNewBusiness = false
+
+  if (businessId) {
+    const supabase = await createClient()
+    const { count } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+    
+    if (count === 0) {
+      isNewBusiness = true
+    }
+  }
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 bg-[#FAFAFA] min-h-screen">
@@ -49,6 +66,8 @@ export default async function DashboardPage({
         <h2 className="text-2xl font-bold tracking-tight text-slate-900">ড্যাশবোর্ড</h2>
         <DateRangeFilter />
       </div>
+
+      {isNewBusiness && <DashboardEmptyState />}
       
       <QuickActions />
 

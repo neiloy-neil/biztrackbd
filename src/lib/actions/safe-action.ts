@@ -218,3 +218,59 @@ export function requirePermission<TInput, TOutput>(
     return actionFn(data, businessId)
   }
 }
+
+/**
+ * Enforces the user is a Platform Admin before executing the action.
+ * Usage:
+ * export const myAdminAction = adminAction(async (data, ctx) => { ... })
+ */
+export function adminAction<TInput, TOutput>(
+  action: (data: TInput, ctx: { userId: string }) => Promise<ActionResponse<TOutput>>
+) {
+  return async (data: TInput): Promise<ActionResponse<TOutput>> => {
+    const isRateLimited = await rateLimit('adminAction')
+    if (isRateLimited) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' }
+    }
+
+    const supabase = await createClient()
+
+    // 1. Validate Session
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized: No active session' }
+    }
+
+    // 2. Validate Platform Admin Status
+    const { data: adminData, error: adminError } = await supabase
+      .from('platform_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (adminError || !adminData) {
+      // Audit log the failed authorization attempt
+      await auditLog({
+        action: 'unauthorized_platform_admin_access_attempt',
+        entity_type: 'platform',
+        entity_id: user.id,
+        business_id: null,
+        user_id: user.id,
+        new_data: { 
+          request_type: 'admin_server_action',
+          payload: data
+        }
+      })
+      return { success: false, error: 'Forbidden: You do not have platform admin access' }
+    }
+
+    // 3. Execute the actual action with the secure context
+    try {
+      const result = await action(data, { userId: user.id })
+      return result
+    } catch (e: any) {
+      console.error('Server Action Error:', e)
+      return { success: false, error: 'Internal Server Error' }
+    }
+  }
+}

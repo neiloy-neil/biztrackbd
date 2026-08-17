@@ -8,17 +8,17 @@ export function UserActionsMenu({ userId, status }: { userId: string, status: st
   const router = useRouter()
 
   const handleSuspend = async () => {
-    if (!confirm('Are you sure you want to suspend this user? They will be immediately locked out of all associated businesses.')) return
-    await suspendUserAction(userId, 'Admin action')
+    if (!confirm('Are you sure you want to suspend this user?')) return
+    await suspendUserAction({ userId, reason: 'Admin action' })
   }
 
   const handleReactivate = async () => {
-    await reactivateUserAction(userId)
+    await reactivateUserAction({ userId, reason: 'Admin action' })
   }
 
   const handleForceLogout = async () => {
-    if (!confirm('WARNING: Are you sure you want to force logout this user? All their active sessions will be terminated.')) return
-    await forceLogoutUserAction(userId, 'Admin force logout')
+    if (!confirm('Force logout this user from all sessions?')) return
+    await forceLogoutUserAction({ userId, reason: 'Admin action' })
   }
 
   return (

@@ -105,3 +105,21 @@ export async function resumeSubscriptionAction() {
 
   if (error) throw new Error(error.message)
 }
+
+import { authAction } from '@/lib/actions/safe-action'
+
+export const fetchInvoices = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('business_id', ctx.businessId)
+    .order('created_at', { ascending: false })
+    
+  if (error) {
+    return { success: false as const, error: error.message }
+  }
+  
+  return { success: true as const, data: invoices }
+})

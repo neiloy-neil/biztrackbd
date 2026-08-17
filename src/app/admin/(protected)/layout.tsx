@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity, HeadphonesIcon, Flag, Bell } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -20,7 +20,7 @@ export default async function AdminLayout({
   // 2. Check Admin Privileges
   const { data: adminData } = await supabase
     .from('platform_admins')
-    .select('role')
+    .select('*')
     .eq('user_id', user.id)
     .single()
 
@@ -28,6 +28,11 @@ export default async function AdminLayout({
     // If not an admin, boot them to the regular app dashboard
     redirect('/app/dashboard')
   }
+
+  const { count: unreadCount } = await supabase
+    .from('platform_notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_read', false)
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -63,6 +68,25 @@ export default async function AdminLayout({
           <Link href="/admin/settings" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
             <Settings size={20} />
             <span>Platform Settings</span>
+          </Link>
+          <Link href="/admin/support" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <HeadphonesIcon size={20} />
+            <span>Support Tickets</span>
+          </Link>
+          <Link href="/admin/feature-flags" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <Flag size={20} />
+            <span>Feature Flags</span>
+          </Link>
+          <Link href="/admin/notifications" className="flex items-center justify-between text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <div className="flex items-center space-x-3">
+              <Bell size={20} />
+              <span>Notifications</span>
+            </div>
+            {unreadCount !== null && unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
           <Link href="/admin/audit-logs" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
             <Activity size={20} />

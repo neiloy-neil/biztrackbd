@@ -1,4 +1,4 @@
-import { fetchUsersList } from '@/domains/admin/actions'
+import { fetchPlatformUsersList } from '@/domains/admin/actions'
 import Link from 'next/link'
 import { Search, Users, Eye } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +12,8 @@ export default async function AdminUsersPage({
   const q = typeof params.q === 'string' ? params.q : ''
   const status = typeof params.status === 'string' ? params.status : ''
 
-  const users = await fetchUsersList(q, status)
+  const response = await fetchPlatformUsersList({ searchQuery: q, filterStatus: status })
+  const users = response.success ? (response.data as any[]) : []
 
   return (
     <div className="space-y-6">

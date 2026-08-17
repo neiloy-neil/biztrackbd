@@ -9,13 +9,13 @@ export const metadata = {
 
 export default async function SuperAdminDashboard() {
   // Fetch platform metrics concurrently
-  const [metricsRes, growthRes] = await Promise.all([
-    getPlatformMetrics({}),
-    getPlatformGrowth({})
+  const [metricsResponse, growthResponse] = await Promise.all([
+    getPlatformMetrics(),
+    getPlatformGrowth()
   ])
 
-  const metrics = metricsRes.success ? metricsRes.data : null
-  const growthData = growthRes.success ? growthRes.data : null
+  const metrics = metricsResponse.success ? metricsResponse.data : null
+  const growthData = growthResponse.success ? growthResponse.data : null
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">

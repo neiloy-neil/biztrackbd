@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const supabase = createAdminClient()
   const now = new Date().toISOString()
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   try {
     const results = {
@@ -111,12 +111,12 @@ export async function GET(request: Request) {
        results.past_due++
     }
 
-    // 3. Process Suspensions (Past Due for > 14 days)
+    // 3. Process Suspensions (Past Due for > 7 days)
     const { data: suspendedSubs, error: suspError } = await supabase
       .from('subscriptions')
       .select('id')
       .eq('status', 'past_due')
-      .lte('current_period_end', fourteenDaysAgo)
+      .lte('current_period_end', sevenDaysAgo)
 
     if (suspError) throw suspError
 

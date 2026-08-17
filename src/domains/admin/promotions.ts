@@ -1,22 +1,20 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logPlatformAction } from '@/lib/security/audit'
+import { adminAction } from '@/lib/actions/safe-action'
 
-export async function getCoupons() {
-  const supabase = await createClient()
-  
-  // Verify platform admin status
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) return []
-
-  const adminSupabase = createAdminClient(
+// Helper to get a service role client inside an admin action
+// adminAction already verifies platform admin status securely
+function getAdminSupabase() {
+  return createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+}
+
+export const getCoupons = adminAction(async (_params: void) => {
+  const adminSupabase = getAdminSupabase()
 
   const { data, error } = await adminSupabase
     .from('coupons')
@@ -25,136 +23,104 @@ export async function getCoupons() {
 
   if (error) {
     console.error('Error fetching coupons:', error)
-    return []
+    return { success: false, error: error.message }
   }
-  return data
-}
+  return { success: true, data }
+})
 
-export async function createCoupon(formData: FormData) {
-  const supabase = await createClient()
-  
-  // Verify platform admin status
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) throw new Error('Unauthorized')
-
-  const code = formData.get('code') as string
-  const type = formData.get('type') as string
-  const value = parseFloat(formData.get('value') as string)
-  const duration = formData.get('duration') as string
-  const duration_in_months = duration === 'repeating' ? parseInt(formData.get('duration_in_months') as string) : null
-  const target_plan_id = formData.get('target_plan_id') as string || null
-  const eligibility = formData.get('eligibility') as string
-  const max_redemptions = formData.get('max_redemptions') ? parseInt(formData.get('max_redemptions') as string) : null
-  const expires_at = formData.get('expires_at') as string || null
-
-  const adminSupabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+export const createCoupon = adminAction(async (params: { 
+  code: string, 
+  type: string, 
+  value: number, 
+  duration: string, 
+  duration_in_months: number | null, 
+  target_plan_id: string | null, 
+  eligibility: string, 
+  max_redemptions: number | null, 
+  expires_at: string | null 
+}, ctx) => {
+  const adminSupabase = getAdminSupabase()
 
   const { error } = await adminSupabase.from('coupons').insert({
-    code: code.toUpperCase(),
-    type,
-    value,
-    duration,
-    duration_in_months,
-    target_plan_id,
-    eligibility,
-    max_redemptions,
-    expires_at
+    code: params.code.toUpperCase(),
+    type: params.type,
+    value: params.value,
+    duration: params.duration,
+    duration_in_months: params.duration_in_months,
+    target_plan_id: params.target_plan_id,
+    eligibility: params.eligibility,
+    max_redemptions: params.max_redemptions,
+    expires_at: params.expires_at
   })
 
   if (error) {
     console.error('Error creating coupon:', error)
-    throw new Error(error.message)
+    return { success: false, error: error.message }
   }
 
   await logPlatformAction({
     action: 'create_coupon',
     target_type: 'coupon',
-    target_id: code.toUpperCase(),
-    new_state: { type, value, duration, target_plan_id, eligibility }
+    target_id: params.code.toUpperCase(),
+    admin_id: ctx.userId,
+    new_data: { type: params.type, value: params.value, duration: params.duration, target_plan_id: params.target_plan_id, eligibility: params.eligibility }
   })
-}
 
-export async function toggleCouponActive(couponId: string, isActive: boolean) {
-  const supabase = await createClient()
-  
-  // Verify platform admin status
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) throw new Error('Unauthorized')
+  return { success: true }
+})
 
-  const adminSupabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+export const toggleCouponActive = adminAction(async (params: { couponId: string, isActive: boolean }, ctx) => {
+  const adminSupabase = getAdminSupabase()
 
-  const { error } = await adminSupabase.from('coupons').update({ is_active: isActive }).eq('id', couponId)
-  if (error) throw new Error(error.message)
+  const { error } = await adminSupabase.from('coupons').update({ is_active: params.isActive }).eq('id', params.couponId)
+  if (error) return { success: false, error: error.message }
 
   await logPlatformAction({
-    action: isActive ? 'enable_coupon' : 'disable_coupon',
+    action: params.isActive ? 'enable_coupon' : 'disable_coupon',
     target_type: 'coupon',
-    target_id: couponId
+    target_id: params.couponId,
+    admin_id: ctx.userId
   })
-}
-
-export async function extendTrial(businessId: string, days: number) {
-  const supabase = await createClient()
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) throw new Error('Unauthorized')
+  return { success: true }
+})
 
-  const adminSupabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+export const extendTrial = adminAction(async (params: { businessId: string, days: number }, ctx) => {
+  const adminSupabase = getAdminSupabase()
 
-  const { data, error } = await adminSupabase.rpc('extend_trial', { p_business_id: businessId, p_days: days })
-  if (error) throw new Error(error.message)
+  const { data, error } = await adminSupabase.rpc('extend_trial', { p_business_id: params.businessId, p_days: params.days })
+  if (error) return { success: false, error: error.message }
 
   await logPlatformAction({
     action: 'extend_trial',
     target_type: 'business',
-    target_id: businessId,
-    new_state: { days }
+    target_id: params.businessId,
+    admin_id: ctx.userId,
+    new_data: { days: params.days }
   })
 
-  return data
-}
+  return { success: true, data }
+})
 
-export async function grantPromotionalCredit(businessId: string, amount: number, reason: string) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) throw new Error('Unauthorized')
-
-  const adminSupabase = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+export const grantPromotionalCredit = adminAction(async (params: { businessId: string, amount: number, reason: string }, ctx) => {
+  const adminSupabase = getAdminSupabase()
 
   const { error } = await adminSupabase.from('promotional_credits').insert({
-    business_id: businessId,
-    amount,
-    reason,
-    created_by: user.id
+    business_id: params.businessId,
+    amount: params.amount,
+    reason: params.reason,
+    created_by: ctx.userId
   })
 
-  if (error) throw new Error(error.message)
+  if (error) return { success: false, error: error.message }
 
   await logPlatformAction({
     action: 'grant_promotional_credit',
     target_type: 'business',
-    target_id: businessId,
-    new_state: { amount, reason }
+    target_id: params.businessId,
+    admin_id: ctx.userId,
+    new_data: { amount: params.amount, reason: params.reason }
   })
-}
+  
+  return { success: true }
+})

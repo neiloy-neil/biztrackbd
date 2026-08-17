@@ -13,7 +13,8 @@ export default async function AdminBusinessesPage({
   const status = typeof params.status === 'string' ? params.status : ''
   const plan = typeof params.plan === 'string' ? params.plan : ''
 
-  const businesses = await fetchBusinessesList(q, status, plan)
+  const response = await fetchBusinessesList({ searchQuery: q, filterStatus: status, filterPlan: plan })
+  const businesses = response.success ? (response.data as any[]) : []
 
   return (
     <div className="space-y-6">

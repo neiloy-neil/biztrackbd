@@ -16,7 +16,8 @@ export default async function BusinessDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const data = await fetchBusinessDetail(id)
+  const response = await fetchBusinessDetail({ businessId: id })
+  const data = response.success ? response.data : null
 
   if (!data || !data.business) {
     notFound()

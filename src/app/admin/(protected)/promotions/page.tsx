@@ -11,10 +11,13 @@ export const metadata = {
 }
 
 export default async function AdminPromotionsPage() {
-  const [coupons, plans] = await Promise.all([
+  const [couponsResponse, plansResponse] = await Promise.all([
     getCoupons(),
     getPlans()
   ])
+
+  const coupons = couponsResponse.success ? (couponsResponse.data as any[]) : []
+  const plans = plansResponse.success ? (plansResponse.data as any[]) : []
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

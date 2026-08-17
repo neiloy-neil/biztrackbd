@@ -14,6 +14,14 @@ export async function createTicket(businessId: string, formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
+  const { data: membership } = await supabase
+    .from('business_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .eq('business_id', businessId)
+    .single()
+  if (!membership) throw new Error('Unauthorized')
+
   const subject = formData.get('subject') as string
   const category = formData.get('category') as string
   const priority = formData.get('priority') as string
@@ -57,6 +65,21 @@ export async function replyToTicket(ticketId: string, message: string, attachmen
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+
+  const { data: ticket } = await supabase
+    .from('support_tickets')
+    .select('business_id')
+    .eq('id', ticketId)
+    .single()
+  if (!ticket) throw new Error('Ticket not found')
+
+  const { data: membership } = await supabase
+    .from('business_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .eq('business_id', ticket.business_id)
+    .single()
+  if (!membership) throw new Error('Unauthorized')
 
   const { error } = await supabase.from('support_ticket_messages').insert({
     ticket_id: ticketId,

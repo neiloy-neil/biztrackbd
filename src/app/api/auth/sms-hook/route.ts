@@ -5,9 +5,9 @@ const SMS_ENDPOINT = 'https://api.sms.net.bd/sendsms'
 
 export async function POST(req: Request) {
   try {
-    // Basic shared secret check if you want to secure the endpoint from public execution
+    const hookSecret = process.env.SUPABASE_HOOK_SECRET
     const authHeader = req.headers.get('Authorization')
-    if (process.env.SUPABASE_HOOK_SECRET && authHeader !== `Bearer ${process.env.SUPABASE_HOOK_SECRET}`) {
+    if (!hookSecret || authHeader !== `Bearer ${hookSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

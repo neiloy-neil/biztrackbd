@@ -67,6 +67,9 @@ async function getRedirectPath(userId: string): Promise<string> {
 }
 
 export async function checkUserExists(phone: string) {
+  const isRateLimited = await rateLimit('checkUserExists')
+  if (isRateLimited) return { exists: true }
+
   const normalizedPhone = normalizePhone(phone)
   const email = deriveEmail(normalizedPhone)
 

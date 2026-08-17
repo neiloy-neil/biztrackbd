@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { checkUserExists, loginWithPin, sendOtp, verifyOtpAndCreateUser } from '../actions'
+import { checkUserExists, loginWithPin, sendOtp, verifyOtpAndCreateUser, resetPin } from '../actions'
 
-type Step = 'phone' | 'login_pin' | 'otp' | 'create_pin'
+type Step = 'phone' | 'login_pin' | 'otp' | 'create_pin' | 'forgot_otp' | 'reset_pin'
 
 export function LoginForm() {
   const [phone, setPhone] = useState('')
@@ -17,8 +17,10 @@ export function LoginForm() {
   const [step, setStep] = useState<Step>('phone')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [resetOtp, setResetOtp] = useState('')
+  const [newPin, setNewPin] = useState('')
   const [timer, setTimer] = useState(0)
-  
+
   const router = useRouter()
 
   useEffect(() => {
@@ -110,6 +112,52 @@ export function LoginForm() {
     }
   }
 
+  const handleForgotPin = async () => {
+    setLoading(true)
+    setError('')
+    const res = await sendOtp(phone)
+    if (!res.success) {
+      setError(res.error || 'Failed to send OTP')
+    } else {
+      setResetOtp('')
+      setNewPin('')
+      setStep('forgot_otp')
+      setTimer(60)
+    }
+    setLoading(false)
+  }
+
+  const handleForgotOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (resetOtp.length < 6) {
+      setError('Please enter a valid 6-digit OTP')
+      return
+    }
+    setError('')
+    setStep('reset_pin')
+  }
+
+  const handleResetPinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (newPin.length < 6) {
+      setError('PIN must be at least 6 digits')
+      setLoading(false)
+      return
+    }
+
+    const res = await resetPin(phone, resetOtp, newPin)
+    if (!res.success) {
+      setError(res.error || 'Failed to reset PIN')
+      if (res.error?.includes('OTP')) setStep('forgot_otp')
+      setLoading(false)
+    } else {
+      router.push(res.redirectTo || '/dashboard')
+    }
+  }
+
   const handleResendOtp = async () => {
     setLoading(true)
     setError('')
@@ -188,6 +236,14 @@ export function LoginForm() {
           <Button disabled={loading || pin.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
             {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন (Login)'}
           </Button>
+          <button
+            type="button"
+            onClick={handleForgotPin}
+            disabled={loading}
+            className="w-full text-sm text-slate-500 hover:text-emerald-600 transition-colors pt-1"
+          >
+            পিন ভুলে গেছেন? (Forgot PIN?)
+          </button>
         </form>
       )}
 
@@ -265,6 +321,83 @@ export function LoginForm() {
           
           <Button disabled={loading || pin.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
             {loading ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'অ্যাকাউন্ট তৈরি করুন (Create Account)'}
+          </Button>
+        </form>
+      )}
+
+      {/* STEP 5: FORGOT PIN — OTP VERIFY */}
+      {step === 'forgot_otp' && (
+        <form onSubmit={handleForgotOtpSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600 text-center">
+              <span className="font-semibold">+880 {phone}</span>-এ একটি OTP পাঠানো হয়েছে।
+            </p>
+            <Label htmlFor="forgot_otp" className="text-slate-700 font-medium">OTP কোড দিন</Label>
+            <Input
+              id="forgot_otp"
+              type="text"
+              inputMode="numeric"
+              value={resetOtp}
+              onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              required
+              autoFocus
+              className="h-12 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 rounded-xl text-center text-2xl tracking-widest font-bold"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-800 border border-rose-200">
+              {error}
+            </div>
+          )}
+
+          <div className="grid gap-3 pt-2">
+            <Button disabled={loading || resetOtp.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
+              এগিয়ে যান (Continue)
+            </Button>
+            <Button
+              type="button"
+              disabled={timer > 0 || loading}
+              onClick={handleForgotPin}
+              variant="outline"
+              className="w-full h-12 text-base font-medium text-slate-700 border-slate-300 hover:bg-slate-50 rounded-xl"
+            >
+              {timer > 0 ? `পুনরায় পাঠাতে পারবেন ${timer}s পর` : 'পুনরায় পাঠান (Resend OTP)'}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* STEP 6: FORGOT PIN — NEW PIN */}
+      {step === 'reset_pin' && (
+        <form onSubmit={handleResetPinSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="reset_pin" className="text-slate-700 font-medium">নতুন পিন সেট করুন (Set new PIN)</Label>
+            <Input
+              id="reset_pin"
+              type="password"
+              inputMode="numeric"
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="••••••"
+              required
+              autoFocus
+              className="h-12 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 rounded-xl text-center text-2xl tracking-widest font-bold"
+            />
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              নতুন ৬-ডিজিটের পিন দিন। পরের বার এই পিন দিয়ে লগইন করবেন।
+            </p>
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-800 border border-rose-200">
+              {error}
+            </div>
+          )}
+
+          <Button disabled={loading || newPin.length < 6} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
+            {loading ? 'পিন পরিবর্তন হচ্ছে...' : 'পিন পরিবর্তন করুন (Reset PIN)'}
           </Button>
         </form>
       )}

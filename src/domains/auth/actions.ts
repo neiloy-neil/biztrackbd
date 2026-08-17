@@ -248,6 +248,71 @@ export async function verifyOtpAndCreateUser(phone: string, token: string, pin: 
   return { success: true, redirectTo: `${appPrefix}/onboarding` }
 }
 
+export async function resetPin(phone: string, otp: string, newPin: string) {
+  const isRateLimited = await rateLimit('resetPin')
+  if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
+
+  if (!newPin || newPin.length < 6) {
+    return { success: false, error: 'আপনার পিন কমপক্ষে ৬ সংখ্যার হতে হবে।' }
+  }
+
+  const normalizedPhone = normalizePhone(phone)
+  const adminClient = await createAdminClient()
+
+  const { data: otpRecord, error: fetchError } = await adminClient
+    .from('phone_otps')
+    .select('*')
+    .eq('phone', normalizedPhone)
+    .is('verified_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (fetchError || !otpRecord) {
+    return { success: false, error: 'OTP মেয়াদ শেষ হয়েছে। পুনরায় চেষ্টা করুন।' }
+  }
+
+  await adminClient
+    .from('phone_otps')
+    .update({ attempts: (otpRecord.attempts || 0) + 1 })
+    .eq('id', otpRecord.id)
+
+  if ((otpRecord.attempts || 0) >= 5) {
+    return { success: false, error: 'অনেকবার ভুল চেষ্টা হয়েছে। নতুন OTP পাঠান।' }
+  }
+
+  if (otpRecord.otp !== otp.trim()) {
+    return { success: false, error: 'ভুল OTP। আবার চেষ্টা করুন।' }
+  }
+
+  await adminClient
+    .from('phone_otps')
+    .update({ verified_at: new Date().toISOString() })
+    .eq('id', otpRecord.id)
+
+  const email = deriveEmail(normalizedPhone)
+  const { data: userId } = await adminClient.rpc('get_user_id_by_email', { p_email: email })
+
+  if (!userId) {
+    return { success: false, error: 'অ্যাকাউন্ট পাওয়া যায়নি।' }
+  }
+
+  const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, { password: newPin })
+  if (updateError) {
+    return { success: false, error: 'পিন পরিবর্তন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।' }
+  }
+
+  const supabase = await createClient()
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: newPin })
+  if (signInError) {
+    return { success: false, error: 'পিন রিসেট হয়েছে। লগইন করুন।' }
+  }
+
+  const redirectTo = await getRedirectPath(userId)
+  return { success: true, redirectTo }
+}
+
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()

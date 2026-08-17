@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { AppLink as Link } from '@/components/AppLink'
 import { cn } from '@/lib/utils'
 import { RequirePermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 import { addToOfflineQueue } from '@/lib/offline/queue'
 
 interface ClosingClientProps {
@@ -188,7 +189,7 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
 
         </CardContent>
         {!isClosed && (
-          <RequirePermission permission="closing.manage">
+          <RequirePermission permission={PERMISSIONS.CLOSING_MANAGE}>
             <CardFooter className="bg-slate-50/50 pt-4 pb-4 px-6 border-t rounded-b-xl">
               <Button 
                 onClick={handleCloseDay} 
@@ -248,14 +249,10 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
 
           <div className="pt-4 border-t space-y-3">
             <h4 className="text-sm font-semibold text-slate-700 mb-2">অন্যান্য ব্যালেন্স (Other Balances)</h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="bg-pink-50 p-3 rounded-lg border border-pink-100">
-                <p className="text-[10px] text-pink-600 font-semibold mb-1">bKash</p>
-                <p className="text-sm font-bold text-pink-900">{formatTk(summary.balances.bkash)}</p>
-              </div>
-              <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                <p className="text-[10px] text-orange-600 font-semibold mb-1">Nagad</p>
-                <p className="text-sm font-bold text-orange-900">{formatTk(summary.balances.nagad)}</p>
+                <p className="text-[10px] text-pink-600 font-semibold mb-1">Mobile Money</p>
+                <p className="text-sm font-bold text-pink-900">{formatTk(summary.balances.mobile_money)}</p>
               </div>
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
                 <p className="text-[10px] text-blue-600 font-semibold mb-1">Bank</p>

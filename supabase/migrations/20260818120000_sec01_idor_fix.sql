@@ -1,23 +1,9 @@
--- =============================================================
--- Migration: SEC-01 Cross-Tenant IDOR Remediation
---
--- Four relational INSERT policies allowed users in Business A to
--- reference entities (products, accounts, parties) belonging to
--- Business B, bypassing tenant isolation at the RLS layer.
---
--- Fixes:
--- 1. inventory_movements INSERT: validate product_id belongs to same business
--- 2. set_inventory_movement_balances trigger: assert cross-tenant mismatch
--- 3. account_transactions INSERT: validate account_id belongs to same business
--- 4. transaction_items INSERT: validate product_id belongs to same business
--- 5. transactions INSERT: validate party_id belongs to same business
--- 6. is_business_member: harden with STABLE + search_path (best practice)
--- =============================================================
+-- SEC-01 Cross-Tenant IDOR Remediation
+-- Four INSERT policies validated parent business membership but not FK targets.
+-- This migration adds cross-tenant checks and hardens the stock trigger.
 
 
--- ============================================================
--- 1. Harden is_business_member (search_path + STABLE)
--- ============================================================
+-- 1. Harden is_business_member: STABLE + fixed search_path
 CREATE OR REPLACE FUNCTION public.is_business_member(biz_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -35,9 +21,7 @@ END;
 $$;
 
 
--- ============================================================
--- 2. inventory_movements INSERT — validate product belongs to same business
--- ============================================================
+-- 2. inventory_movements INSERT: also validate product belongs to same business
 DROP POLICY IF EXISTS "Tenant isolation INSERT inventory_movements" ON public.inventory_movements;
 
 CREATE POLICY "Tenant isolation INSERT inventory_movements"
@@ -53,10 +37,7 @@ CREATE POLICY "Tenant isolation INSERT inventory_movements"
   );
 
 
--- ============================================================
--- 3. Harden set_inventory_movement_balances trigger
---    Fail closed if product does not belong to the movement's business.
--- ============================================================
+-- 3. Harden set_inventory_movement_balances: fail if product is cross-tenant
 CREATE OR REPLACE FUNCTION public.set_inventory_movement_balances()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -64,10 +45,9 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  current_qty   NUMERIC(19,4);
-  product_biz   UUID;
+  current_qty NUMERIC(19,4);
+  product_biz UUID;
 BEGIN
-  -- Cross-tenant guard: product must belong to the same business as the movement
   SELECT business_id INTO product_biz
   FROM public.products
   WHERE id = NEW.product_id
@@ -101,9 +81,7 @@ END;
 $$;
 
 
--- ============================================================
--- 4. account_transactions INSERT — validate account belongs to same business
--- ============================================================
+-- 4. account_transactions INSERT: also validate account belongs to same business
 DROP POLICY IF EXISTS "Tenant isolation INSERT account_transactions" ON public.account_transactions;
 
 CREATE POLICY "Tenant isolation INSERT account_transactions"
@@ -114,7 +92,6 @@ CREATE POLICY "Tenant isolation INSERT account_transactions"
       SELECT 1 FROM public.transactions t
       WHERE t.id = transaction_id
         AND public.is_business_member(t.business_id)
-        -- account must belong to the same business as the transaction
         AND EXISTS (
           SELECT 1 FROM public.accounts a
           WHERE a.id = account_id
@@ -124,9 +101,7 @@ CREATE POLICY "Tenant isolation INSERT account_transactions"
   );
 
 
--- ============================================================
--- 5. transaction_items INSERT — validate product belongs to same business
--- ============================================================
+-- 5. transaction_items INSERT: also validate product belongs to same business
 DROP POLICY IF EXISTS "Tenant isolation INSERT transaction_items" ON public.transaction_items;
 
 CREATE POLICY "Tenant isolation INSERT transaction_items"
@@ -146,11 +121,8 @@ CREATE POLICY "Tenant isolation INSERT transaction_items"
   );
 
 
--- ============================================================
--- 6. transactions INSERT — validate party_id belongs to same business
---    Original policy name: "RBAC INSERT transactions" (20260816120000_rbac_and_audit.sql)
---    Also drop the fix_transaction_rls variant just in case.
--- ============================================================
+-- 6. transactions INSERT: also validate party_id belongs to same business
+-- Original policy name from 20260816120000_rbac_and_audit.sql is "RBAC INSERT transactions"
 DROP POLICY IF EXISTS "RBAC INSERT transactions" ON public.transactions;
 DROP POLICY IF EXISTS "Tenant isolation INSERT transactions" ON public.transactions;
 

@@ -7,8 +7,7 @@ export function toBanglaNumber(number: number | string): string {
 }
 
 export function formatBanglaCurrency(amount: number): string {
-  // First add commas normally
-  const formatted = amount.toLocaleString('en-IN'); // Indian/Bangladeshi comma style (lakhs/crores)
-  // Then convert digits
-  return toBanglaNumber(formatted);
+  const n = amount ?? 0
+  const formatted = n.toLocaleString('en-IN')
+  return toBanglaNumber(formatted)
 }

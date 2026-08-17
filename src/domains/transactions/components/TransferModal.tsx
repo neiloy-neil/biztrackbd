@@ -79,10 +79,12 @@ export function TransferModal({
   useEffect(() => {
     if (!open) return
     setLoadingAccounts(true)
-    getAccounts().then((res) => {
-      if (res?.success) setAccounts((res.data as Account[]) ?? [])
-      setLoadingAccounts(false)
-    })
+    getAccounts()
+      .then((res) => {
+        if (res?.success) setAccounts((res.data as Account[]) ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAccounts(false))
   }, [open])
 
   const reset = () => {

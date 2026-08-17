@@ -15,6 +15,13 @@ export default async function POSPage() {
     redirect('/login')
   }
 
+  // Fetch Business Profile
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('name, phone, address, district')
+    .eq('id', businessId)
+    .single()
+
   // Fetch Products
   const { data: products } = await supabase
     .from('products')
@@ -45,6 +52,9 @@ export default async function POSPage() {
           initialProducts={products || []}
           accounts={accounts || []}
           customers={customers || []}
+          businessName={business?.name || 'BizTrack BD'}
+          businessPhone={business?.phone || ''}
+          businessAddress={[business?.address, business?.district].filter(Boolean).join(', ')}
         />
       </Suspense>
     </div>

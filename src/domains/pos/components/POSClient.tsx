@@ -34,10 +34,16 @@ export default function POSClient({
   initialProducts,
   accounts,
   customers,
+  businessName = 'BizTrack BD',
+  businessPhone = '',
+  businessAddress = '',
 }: {
   initialProducts: Product[]
   accounts: Account[]
   customers: Customer[]
+  businessName?: string
+  businessPhone?: string
+  businessAddress?: string
 }) {
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -223,8 +229,10 @@ export default function POSClient({
 
         <div className="hidden print:block w-[80mm] p-4 bg-white text-black font-mono text-sm absolute top-0 left-0">
           <div className="text-center mb-4">
-            <h1 className="text-xl font-bold">BIZTRACK BD</h1>
-            <p>Invoice: #{lastTxnId.split('-')[0]}</p>
+            <h1 className="text-xl font-bold">{businessName}</h1>
+            {businessPhone && <p>{businessPhone}</p>}
+            {businessAddress && <p>{businessAddress}</p>}
+            <p className="mt-1">Invoice: #{lastTxnId.split('-')[0]}</p>
             <p>Date: {new Date().toLocaleString()}</p>
           </div>
           <div className="border-t border-b border-dashed border-black py-2 mb-2">
@@ -443,12 +451,12 @@ export default function POSClient({
 
       {/* Checkout Modal */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md flex flex-col max-h-[90dvh]">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-2xl font-bold">বিক্রয় সম্পন্ন করুন</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-5 py-2 max-h-[80vh] overflow-y-auto px-1">
+          <div className="flex-1 overflow-y-auto space-y-5 py-2 px-1 min-h-0">
             {/* Total */}
             <div className="text-center p-4 bg-slate-50 rounded-lg border border-slate-100">
               <p className="text-sm text-slate-500 mb-1">মোট পরিমাণ</p>

@@ -33,7 +33,7 @@ export const updateBusinessProfile = authAction(async (
   ctx
 ) => {
   const supabase = await createClient()
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('businesses')
     .update({
       name: data.name.trim(),
@@ -46,7 +46,10 @@ export const updateBusinessProfile = authAction(async (
       updated_at: new Date().toISOString(),
     })
     .eq('id', ctx.businessId)
+    .select('id')
+    .single()
   if (error) return { success: false, error: error.message }
+  if (!updated) return { success: false, error: 'আপডেট হয়নি। আপনার অনুমতি নেই অথবা business ID মিলছে না।' }
   revalidatePath('/app/settings')
   revalidatePath('/app/settings/business')
   return { success: true, data: null }

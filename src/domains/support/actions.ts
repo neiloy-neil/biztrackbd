@@ -150,6 +150,45 @@ export async function assignTicket(ticketId: string, assigneeId: string | null) 
   revalidatePath(`/admin/support/${ticketId}`)
 }
 
+export async function resolveTicket(ticketId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: isSuperAdmin } = await supabase.rpc('is_platform_admin')
+  if (!isSuperAdmin) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('support_tickets')
+    .update({ status: 'Resolved' })
+    .eq('id', ticketId)
+
+  if (error) throw error
+
+  revalidatePath(`/admin/support/${ticketId}`)
+  revalidatePath('/admin/support')
+}
+
+export async function getSupportAttachmentUrl(path: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // We use the regular authenticated client so that the Storage RLS policy enforces
+  // that the user belongs to the business_id (which is the first folder in the path),
+  // or that they are a platform admin.
+  const { data, error } = await supabase.storage
+    .from('support-attachments')
+    .createSignedUrl(path, 60)
+
+  if (error || !data) {
+    console.error('Failed to generate signed URL:', error)
+    throw new Error('You do not have permission to view this attachment.')
+  }
+
+  return data.signedUrl
+}
+
 export async function adminReplyToTicket(ticketId: string, message: string, isInternalNote: boolean, attachmentUrl?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

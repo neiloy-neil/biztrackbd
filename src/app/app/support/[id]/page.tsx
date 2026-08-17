@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, User, MessageSquare, Download } from 'lucide-react'
 import TicketReplyForm from './reply-form'
+import { SecureAttachmentButton } from '@/domains/support/components/secure-attachment-button'
 
 export default async function TenantTicketPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -33,13 +34,7 @@ export default async function TenantTicketPage({ params }: { params: { id: strin
     .eq('ticket_id', ticket.id)
     .order('created_at', { ascending: true })
 
-  // Function to get temporary download URL for attachments
-  const getAttachmentUrl = async (path: string) => {
-    // If it's stored privately, create signed url. If public (which we avoided), just publicUrl.
-    // For simplicity in this codebase, assuming we can get a signed URL:
-    const { data } = await supabase.storage.from('support-attachments').createSignedUrl(path, 3600)
-    return data?.signedUrl || '#'
-  }
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -85,12 +80,7 @@ export default async function TenantTicketPage({ params }: { params: { id: strin
                   </div>
                   {msg.attachment_url && (
                     <div className="pt-2">
-                      {/* Using a client component or server action to handle secure download would be better, but we can render a link if signed URL generated */}
-                      {/* For now, just show a badge */}
-                      <Badge variant="outline" className="gap-1 cursor-pointer">
-                        <Download className="w-3 h-3" />
-                        Attachment Included
-                      </Badge>
+                      <SecureAttachmentButton path={msg.attachment_url} />
                     </div>
                   )}
                 </div>

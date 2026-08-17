@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, User, MessageSquare, Download, Lock, Building, Calendar } from 'lucide-react'
 import AdminTicketReplyForm from './admin-reply-form'
 import AdminSupportControls from './admin-support-controls'
+import { SecureAttachmentButton } from '@/domains/support/components/secure-attachment-button'
 
 export default async function AdminTicketPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -100,10 +101,7 @@ export default async function AdminTicketPage({ params }: { params: { id: string
                         </div>
                         {msg.attachment_url && (
                           <div className="pt-2">
-                            <Badge variant="outline" className="gap-1 cursor-pointer">
-                              <Download className="w-3 h-3" />
-                              Attachment ({msg.attachment_url.split('/').pop()})
-                            </Badge>
+                            <SecureAttachmentButton path={msg.attachment_url} />
                           </div>
                         )}
                       </div>

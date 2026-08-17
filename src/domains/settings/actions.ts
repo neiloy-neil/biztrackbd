@@ -7,6 +7,34 @@ import { revalidatePath } from 'next/cache'
 
 import { canUseFeature } from '@/domains/saas/entitlements'
 
+// ── Business ──────────────────────────────────────────────────────────────────
+
+export const getBusinessProfile = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  const { data: biz, error } = await supabase
+    .from('businesses')
+    .select('id, name, currency, timezone')
+    .eq('id', ctx.businessId)
+    .single()
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: biz }
+})
+
+export const updateBusinessProfile = authAction(async (
+  data: { name: string; currency?: string; timezone?: string },
+  ctx
+) => {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('businesses')
+    .update({ name: data.name.trim(), updated_at: new Date().toISOString() })
+    .eq('id', ctx.businessId)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  revalidatePath('/app/settings/business')
+  return { success: true }
+})
+
 // ── Accounts ──────────────────────────────────────────────────────────────────
 
 export const getAccountsWithBalance = authAction(async (data: void, ctx) => {

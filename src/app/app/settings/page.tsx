@@ -32,6 +32,7 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-2 flex flex-col">
             <p className="text-sm text-slate-600 mb-2">আপনি বর্তমানে একটি ডেমো/সক্রিয় ব্যবসায় আছেন।</p>
+            <Link href="/app/settings/business" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>ব্যবসার সেটিংস</Link>
             <Link href="/app/closing" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>হিসাব ক্লোজিং (Day Close)</Link>
             <Link href="/settings/profile" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>প্রোফাইল আপডেট</Link>
             <Link href="/settings/staff" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}>স্টাফ ম্যানেজমেন্ট</Link>

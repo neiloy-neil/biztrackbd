@@ -1,4 +1,5 @@
 import { fetchBusinessDetail } from '@/domains/admin/actions'
+import { getEntitlements } from '@/domains/saas/entitlements'
 import { notFound } from 'next/navigation'
 import { 
   Building2, Users, MapPin, CreditCard, Activity, 
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ActionsMenu } from './actions-menu'
+import { ExtendTrialButton, GrantCreditButton } from './promo-actions'
 
 export default async function BusinessDetailPage({
   params
@@ -21,6 +23,7 @@ export default async function BusinessDetailPage({
   }
 
   const { business, owner, metrics, subscription, usage_this_month, recent_audits } = data
+  const entitlements = await getEntitlements(business.id)
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -36,8 +39,12 @@ export default async function BusinessDetailPage({
           <p className="text-sm text-gray-500 mt-1 font-mono">ID: {business.id}</p>
         </div>
         
-        {/* Dangerous Actions Menu */}
-        <ActionsMenu businessId={business.id} status={business.status} />
+        {/* Actions */}
+        <div className="flex gap-2 items-center">
+          <ExtendTrialButton businessId={business.id} />
+          <GrantCreditButton businessId={business.id} />
+          <ActionsMenu businessId={business.id} status={business.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -99,20 +106,50 @@ export default async function BusinessDetailPage({
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Feature Usage (Current Period)</h4>
-                    {usage_this_month && usage_this_month.length > 0 ? (
-                      <div className="space-y-3">
-                        {usage_this_month.map((usage: any, idx: number) => (
-                          <div key={idx}>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="font-medium text-gray-700 capitalize">{usage.feature_key}</span>
-                              <span className="text-gray-500">{usage.usage_count} units</span>
+                    {entitlements && Object.keys(entitlements.features).length > 0 ? (
+                      <div className="space-y-4">
+                        {Object.keys(entitlements.features)
+                          .filter(key => 
+                            typeof entitlements.features[key] === 'object' && 
+                            entitlements.features[key] !== null && 
+                            entitlements.features[key].limit_value !== undefined
+                          )
+                          .map((key, idx: number) => {
+                          const featureConfig = entitlements.features[key]
+                          const usageCount = entitlements.usage[key] || 0
+                          const limitValue = featureConfig.limit_value
+                          const hardLimit = featureConfig.hard_limit_value || limitValue
+                          const softLimitThreshold = featureConfig.soft_limit_threshold || 80
+                          
+                          const isUnlimited = limitValue === null
+                          const percentage = isUnlimited ? 0 : Math.min(100, Math.round((usageCount / limitValue) * 100))
+                          
+                          let statusColor = 'bg-emerald-500'
+                          
+                          if (!isUnlimited) {
+                            if (percentage >= 100 && hardLimit && usageCount >= hardLimit) {
+                              statusColor = 'bg-red-500'
+                            } else if (percentage >= 100) {
+                              statusColor = 'bg-orange-500'
+                            } else if (percentage >= softLimitThreshold) {
+                              statusColor = 'bg-yellow-400'
+                            }
+                          }
+
+                          return (
+                            <div key={idx}>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}</span>
+                                <span className="text-gray-900 font-semibold">{usageCount.toLocaleString()} / {isUnlimited ? '∞' : limitValue.toLocaleString()} {!isUnlimited && <span className="text-gray-500 font-normal ml-1">({percentage}%)</span>}</span>
+                              </div>
+                              {!isUnlimited && (
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div className={`${statusColor} h-1.5 rounded-full`} style={{ width: `${percentage}%` }}></div>
+                                </div>
+                              )}
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                              {/* Fake progress bar since we don't have limits fetched here yet */}
-                              <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: '45%' }}></div>
-                            </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">No feature usage recorded this period.</p>

@@ -113,10 +113,13 @@ BEGIN
           'created_at', al.created_at
         )
       ), '[]'::json)
-      FROM public.audit_logs al
-      WHERE al.user_id = p_user_id
-      ORDER BY al.created_at DESC
-      LIMIT 10
+      FROM (
+        SELECT action, entity_type, created_at 
+        FROM public.audit_logs 
+        WHERE user_id = p_user_id
+        ORDER BY created_at DESC
+        LIMIT 10
+      ) al
     ),
     'sessions', (
       SELECT COALESCE(json_agg(

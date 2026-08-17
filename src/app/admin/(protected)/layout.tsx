@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -56,9 +56,17 @@ export default async function AdminLayout({
             <CreditCard size={20} />
             <span>Billing & Plans</span>
           </Link>
+          <Link href="/admin/promotions" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <Tag size={20} />
+            <span>Promotions</span>
+          </Link>
           <Link href="/admin/settings" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
             <Settings size={20} />
             <span>Platform Settings</span>
+          </Link>
+          <Link href="/admin/audit-logs" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <Activity size={20} />
+            <span>Audit Logs</span>
           </Link>
         </nav>
 

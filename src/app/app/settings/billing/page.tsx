@@ -69,8 +69,8 @@ export default async function TenantBillingPage() {
     ? Object.keys(entitlements.features).filter(k => 
         typeof entitlements.features[k] === 'object' && 
         entitlements.features[k] !== null && 
-        entitlements.features[k].limit_value !== undefined &&
-        entitlements.features[k].limit_value !== null && // Filter out unlimited if needed, or keep to show 0 / ∞
+        (entitlements.features[k] as any).limit_value !== undefined &&
+        (entitlements.features[k] as any).limit_value !== null && // Filter out unlimited if needed, or keep to show 0 / ∞
         featureLabels[k]
       ) 
     : []
@@ -105,11 +105,11 @@ export default async function TenantBillingPage() {
                 <h4 className="text-md font-semibold text-slate-800 mb-4">Usage Overview</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {meteredFeatures.map(key => {
-                    const featureConfig = entitlements.features[key]
+                    const featureConfig = entitlements.features[key] as any
                     const usageCount = entitlements.usage[key] || 0
-                    const limitValue = featureConfig.limit_value
-                    const hardLimit = featureConfig.hard_limit_value || limitValue
-                    const softLimitThreshold = featureConfig.soft_limit_threshold || 80
+                    const limitValue = featureConfig?.limit_value
+                    const hardLimit = featureConfig?.hard_limit_value || limitValue
+                    const softLimitThreshold = featureConfig?.soft_limit_threshold || 80
                     
                     const isUnlimited = limitValue === null
                     const percentage = isUnlimited ? 0 : Math.min(100, Math.round((usageCount / limitValue) * 100))
@@ -173,7 +173,7 @@ export default async function TenantBillingPage() {
         activePlanId={activePlanId} 
         activePlanPrice={activePlanPrice}
         scheduledPlanId={subscription?.scheduled_plan_id}
-        scheduledPlanName={subscription?.plans?.name}
+        scheduledPlanName={Array.isArray(subscription?.plans) ? subscription?.plans[0]?.name : (subscription?.plans as any)?.name}
         cancelAtPeriodEnd={subscription?.cancel_at_period_end}
         periodEnd={entitlements?.plan?.period_end}
       />

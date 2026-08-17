@@ -46,7 +46,7 @@ export default function PreferencesForm({
   async function handleSave() {
     setLoading(true)
     try {
-      await updateNotificationPreferences(emailEnabled, mutedTypes)
+      await updateNotificationPreferences({ emailNotifications: emailEnabled, mutedTypes })
       alert('Preferences saved successfully.')
     } catch (err: any) {
       alert(err.message)

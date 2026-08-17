@@ -113,14 +113,14 @@ export default async function BusinessDetailPage({
                           .filter(key => 
                             typeof entitlements.features[key] === 'object' && 
                             entitlements.features[key] !== null && 
-                            entitlements.features[key].limit_value !== undefined
+                            (entitlements.features[key] as any).limit_value !== undefined
                           )
                           .map((key, idx: number) => {
-                          const featureConfig = entitlements.features[key]
+                          const featureConfig = entitlements.features[key] as any
                           const usageCount = entitlements.usage[key] || 0
-                          const limitValue = featureConfig.limit_value
-                          const hardLimit = featureConfig.hard_limit_value || limitValue
-                          const softLimitThreshold = featureConfig.soft_limit_threshold || 80
+                          const limitValue = featureConfig?.limit_value
+                          const hardLimit = featureConfig?.hard_limit_value || limitValue
+                          const softLimitThreshold = featureConfig?.soft_limit_threshold || 80
                           
                           const isUnlimited = limitValue === null
                           const percentage = isUnlimited ? 0 : Math.min(100, Math.round((usageCount / limitValue) * 100))

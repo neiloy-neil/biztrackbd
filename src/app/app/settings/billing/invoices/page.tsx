@@ -55,7 +55,7 @@ export default async function InvoicesPage() {
                       ৳{inv.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={inv.status === 'paid' ? 'success' : inv.status === 'open' ? 'warning' : 'default'}>
+                      <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'open' ? 'secondary' : 'outline'}>
                         {inv.status}
                       </Badge>
                     </td>

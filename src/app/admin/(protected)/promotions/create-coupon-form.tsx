@@ -32,7 +32,17 @@ export default function CreateCouponForm({ plans }: { plans: any[] }) {
     setError(null)
     const formData = new FormData(e.currentTarget)
     try {
-      await createCoupon(formData)
+      await createCoupon({
+        code: formData.get('code') as string,
+        type: formData.get('type') as string,
+        value: parseFloat(formData.get('value') as string),
+        duration: formData.get('duration') as string,
+        duration_in_months: formData.get('duration_in_months') ? parseInt(formData.get('duration_in_months') as string) : null,
+        target_plan_id: formData.get('target_plan_id') as string || null,
+        eligibility: formData.get('eligibility') as string,
+        max_redemptions: formData.get('max_redemptions') ? parseInt(formData.get('max_redemptions') as string) : null,
+        expires_at: formData.get('expires_at') as string || null
+      })
       setOpen(false)
       router.refresh()
     } catch (err: any) {
@@ -87,7 +97,7 @@ export default function CreateCouponForm({ plans }: { plans: any[] }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="duration">Duration</Label>
-              <Select name="duration" value={duration} onValueChange={setDuration}>
+              <Select name="duration" value={duration} onValueChange={(val) => val && setDuration(val)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

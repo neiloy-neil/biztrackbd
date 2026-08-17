@@ -29,12 +29,11 @@ export const createFeatureFlag = adminAction(async (params: { id: string, descri
     action: 'create_feature_flag',
     target_type: 'feature_flag',
     target_id: params.id,
-    admin_id: ctx.userId,
-    new_data: { description: params.description, is_global_enabled: params.isGlobalEnabled }
+    new_state: { description: params.description, is_global_enabled: params.isGlobalEnabled }
   })
 
   revalidatePath('/admin/feature-flags')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const toggleGlobalFeatureFlag = adminAction(async (params: { id: string, isGlobalEnabled: boolean }, ctx) => {
@@ -50,13 +49,12 @@ export const toggleGlobalFeatureFlag = adminAction(async (params: { id: string, 
     action: 'toggle_global_feature_flag',
     target_type: 'feature_flag',
     target_id: params.id,
-    admin_id: ctx.userId,
-    new_data: { is_global_enabled: params.isGlobalEnabled }
+    new_state: { is_global_enabled: params.isGlobalEnabled }
   })
 
   revalidatePath('/admin/feature-flags')
   revalidatePath(`/admin/feature-flags/${params.id}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const setFlagPlanEntitlement = adminAction(async (params: { flagId: string, planId: string, enabled: boolean }, ctx) => {
@@ -74,12 +72,11 @@ export const setFlagPlanEntitlement = adminAction(async (params: { flagId: strin
     action: 'update_flag_plan_entitlement',
     target_type: 'feature_flag',
     target_id: params.flagId,
-    admin_id: ctx.userId,
-    new_data: { plan_id: params.planId, enabled: params.enabled }
+    new_state: { plan_id: params.planId, enabled: params.enabled }
   })
 
   revalidatePath(`/admin/feature-flags/${params.flagId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const addFlagOverride = adminAction(async (params: { flagId: string, targetType: 'business' | 'user', targetId: string, isEnabled: boolean }, ctx) => {
@@ -99,12 +96,11 @@ export const addFlagOverride = adminAction(async (params: { flagId: string, targ
     action: 'add_flag_override',
     target_type: 'feature_flag',
     target_id: params.flagId,
-    admin_id: ctx.userId,
-    new_data: { target_type: params.targetType, target_id: params.targetId, is_enabled: params.isEnabled }
+    new_state: { target_type: params.targetType, target_id: params.targetId, is_enabled: params.isEnabled }
   })
 
   revalidatePath(`/admin/feature-flags/${params.flagId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const removeFlagOverride = adminAction(async (params: { overrideId: string, flagId: string }, ctx) => {
@@ -117,10 +113,9 @@ export const removeFlagOverride = adminAction(async (params: { overrideId: strin
     action: 'remove_flag_override',
     target_type: 'feature_flag',
     target_id: params.flagId,
-    admin_id: ctx.userId,
-    new_data: { override_id: params.overrideId } // Using new_data instead of old_state as that is the type requirement
+    new_state: { override_id: params.overrideId } // Using new_data instead of old_state as that is the type requirement
   })
 
   revalidatePath(`/admin/feature-flags/${params.flagId}`)
-  return { success: true }
+  return { success: true, data: null }
 })

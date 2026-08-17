@@ -16,7 +16,7 @@ export function GlobalToggle({ flagId, isGlobalEnabled }: { flagId: string, isGl
   async function handleToggle(checked: boolean) {
     setLoading(true)
     try {
-      await toggleGlobalFeatureFlag(flagId, checked)
+      await toggleGlobalFeatureFlag({ id: flagId, isGlobalEnabled: checked })
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -44,7 +44,7 @@ export function PlanEntitlements({ flagId, plans, activePlanIds }: { flagId: str
   async function handleToggle(planId: string, checked: boolean) {
     setLoadingPlan(planId)
     try {
-      await setFlagPlanEntitlement(flagId, planId, checked)
+      await setFlagPlanEntitlement({ flagId, planId, enabled: checked })
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -94,7 +94,7 @@ export function FlagOverrides({ flagId, overrides }: { flagId: string, overrides
     e.preventDefault()
     setLoading(true)
     try {
-      await addFlagOverride(flagId, targetType, targetId, isEnabled)
+      await addFlagOverride({ flagId, targetType, targetId, isEnabled })
       setTargetId('')
     } catch (err: any) {
       alert(err.message)
@@ -106,7 +106,7 @@ export function FlagOverrides({ flagId, overrides }: { flagId: string, overrides
   async function handleRemove(id: string) {
     setRemovingId(id)
     try {
-      await removeFlagOverride(id, flagId)
+      await removeFlagOverride({ overrideId: id, flagId })
     } catch (err: any) {
       alert(err.message)
     } finally {

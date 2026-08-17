@@ -24,7 +24,7 @@ export default async function SuperAdminDashboard() {
         <p className="text-gray-500 mt-1">High-level metrics across all BizTrack tenants.</p>
       </div>
 
-      {(!metricsRes.success || !growthRes.success) && (
+      {(!metricsResponse.success || !growthResponse.success) && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
           Warning: Failed to load some platform metrics. Please check system logs.
         </div>

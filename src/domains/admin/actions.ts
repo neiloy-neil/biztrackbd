@@ -61,13 +61,12 @@ export const suspendBusinessAction = adminAction(async (params: { businessId: st
     action: 'suspend_business',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath('/admin/businesses')
   revalidatePath(`/admin/businesses/${params.businessId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const reactivateBusinessAction = adminAction(async (params: { businessId: string, reason: string }, ctx) => {
@@ -83,13 +82,12 @@ export const reactivateBusinessAction = adminAction(async (params: { businessId:
     action: 'reactivate_business',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath('/admin/businesses')
   revalidatePath(`/admin/businesses/${params.businessId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const deleteBusinessAction = adminAction(async (params: { businessId: string, reason: string }, ctx) => {
@@ -105,12 +103,11 @@ export const deleteBusinessAction = adminAction(async (params: { businessId: str
     action: 'delete_business',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath('/admin/businesses')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const updateBusinessPlanAction = adminAction(async (params: { businessId: string, planId: string, reason: string }, ctx) => {
@@ -127,13 +124,12 @@ export const updateBusinessPlanAction = adminAction(async (params: { businessId:
     action: 'update_business_plan',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { plan_id: params.planId, reason: params.reason }
+    new_state: { plan_id: params.planId, reason: params.reason }
   })
   
   revalidatePath('/admin/businesses')
   revalidatePath(`/admin/businesses/${params.businessId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const fetchPlatformUsersList = adminAction(async (params: { searchQuery?: string, filterStatus?: string }) => {
@@ -219,13 +215,12 @@ export const suspendUserAction = adminAction(async (params: { userId: string, re
     action: 'suspend_user',
     target_type: 'user',
     target_id: params.userId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath('/admin/users')
   revalidatePath(`/admin/users/${params.userId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const reactivateUserAction = adminAction(async (params: { userId: string, reason: string }, ctx) => {
@@ -241,13 +236,12 @@ export const reactivateUserAction = adminAction(async (params: { userId: string,
     action: 'reactivate_user',
     target_type: 'user',
     target_id: params.userId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath('/admin/users')
   revalidatePath(`/admin/users/${params.userId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const forceLogoutUserAction = adminAction(async (params: { userId: string, reason: string }, ctx) => {
@@ -263,12 +257,11 @@ export const forceLogoutUserAction = adminAction(async (params: { userId: string
     action: 'force_logout_user',
     target_type: 'user',
     target_id: params.userId,
-    admin_id: ctx.userId,
-    new_data: { reason: params.reason }
+    new_state: { reason: params.reason }
   })
   
   revalidatePath(`/admin/users/${params.userId}`)
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const getPlans = adminAction(async (_params: void) => {

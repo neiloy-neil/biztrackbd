@@ -39,24 +39,34 @@ export const getDailyClosingSummary = requirePermission('closing.manage', authAc
 
 export const closeDay = requirePermission('closing.manage', authAction(async (data: {
   date: string
-  expected_cash: number
   actual_cash: number
-  difference: number
   reason?: string
-  summary: any
 }, ctx) => {
   const supabase = await createClient()
+
+  // 1. Recompute truth on the server
+  const { data: summary, error: summaryError } = await supabase.rpc('get_daily_closing_summary', {
+    p_business_id: ctx.businessId,
+    p_date: data.date
+  })
+
+  if (summaryError || !summary) {
+    return { success: false, error: 'Failed to calculate expected cash for closing.' }
+  }
+
+  const expected_cash = Number(summary.expected_cash || 0)
+  const difference = data.actual_cash - expected_cash
 
   const { error } = await supabase
     .from('daily_closings')
     .insert({
       business_id: ctx.businessId,
       closing_date: data.date,
-      expected_cash: data.expected_cash,
+      expected_cash: expected_cash,
       actual_cash: data.actual_cash,
-      difference: data.difference,
+      difference: difference,
       reason: data.reason || null,
-      summary: data.summary,
+      summary: summary,
       closed_by: ctx.userId
     })
 

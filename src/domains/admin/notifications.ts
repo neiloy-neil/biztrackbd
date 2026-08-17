@@ -55,7 +55,7 @@ export const markNotificationAsRead = adminAction(async (notificationId: string)
   if (error) return { success: false, error: error.message }
   
   revalidatePath('/admin/notifications')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const markAllNotificationsAsRead = adminAction(async (_params: void) => {
@@ -68,7 +68,7 @@ export const markAllNotificationsAsRead = adminAction(async (_params: void) => {
   if (error) return { success: false, error: error.message }
   
   revalidatePath('/admin/notifications')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const deleteNotification = adminAction(async (notificationId: string) => {
@@ -81,7 +81,7 @@ export const deleteNotification = adminAction(async (notificationId: string) => 
   if (error) return { success: false, error: error.message }
   
   revalidatePath('/admin/notifications')
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const updateNotificationPreferences = adminAction(async (params: { emailNotifications: boolean, mutedTypes: string[] }, ctx) => {
@@ -97,5 +97,5 @@ export const updateNotificationPreferences = adminAction(async (params: { emailN
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/admin/notifications/preferences')
-  return { success: true }
+  return { success: true, data: null }
 })

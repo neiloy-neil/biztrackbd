@@ -16,7 +16,7 @@ export const createTransaction = idempotentAction(async (data: {
   notes?: string,
   attachments?: string[]
 }, ctx) => {
-  const canAddTransaction = await canUseFeature(ctx.businessId, 'transaction_limit')
+  const canAddTransaction = await canUseFeature(ctx.businessId, 'transactions_per_month')
   if (!canAddTransaction) {
     return { success: false, error: 'Upgrade required: You have reached the maximum number of transactions for your current plan.' }
   }
@@ -79,39 +79,22 @@ export const createTransaction = idempotentAction(async (data: {
     finalPartyId = newParty.id
   }
 
-  const { data: txn, error: txnError } = await supabase
-    .from('transactions')
-    .insert({
-      business_id: ctx.businessId,
-      branch_id: branch.id,
-      type: data.type,
-      total_amount: data.amount,
-      party_id: finalPartyId,
-      category: data.category,
-      notes: data.notes,
-      attachments: data.attachments || [],
-      created_by: ctx.userId
-    })
-    .select()
-    .single()
+  const { data: transactionId, error: txnError } = await supabase.rpc('create_transaction_atomic', {
+    p_business_id: ctx.businessId,
+    p_branch_id: branch.id,
+    p_type: data.type,
+    p_total_amount: data.amount,
+    p_account_id: data.account_id,
+    p_party_id: finalPartyId,
+    p_category: data.category || null,
+    p_notes: data.notes || null,
+    p_attachments: data.attachments || null,
+    p_created_by: ctx.userId
+  })
 
   if (txnError) {
-    return { success: false, error: txnError.message }
-  }
-
-  // Insert into account_transactions
-  const accountAmount = data.type === 'sale' ? data.amount : -data.amount
-
-  const { error: accTxnError } = await supabase
-    .from('account_transactions')
-    .insert({
-      transaction_id: txn.id,
-      account_id: data.account_id,
-      amount: accountAmount
-    })
-
-  if (accTxnError) {
-    console.error('Failed to create account transaction:', accTxnError)
+    console.error('Failed to create transaction:', txnError)
+    return { success: false, error: 'Transaction failed: ' + txnError.message }
   }
 
   revalidatePath('/dashboard')
@@ -120,7 +103,7 @@ export const createTransaction = idempotentAction(async (data: {
     revalidatePath(`/parties/${data.party_id}`)
   }
 
-  return { success: true, data: txn }
+  return { success: true, data: { id: transactionId } }
 })
 
 export const getAccounts = authAction(async (data: void, ctx) => {

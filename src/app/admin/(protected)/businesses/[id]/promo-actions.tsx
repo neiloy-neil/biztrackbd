@@ -25,7 +25,7 @@ export function ExtendTrialButton({ businessId }: { businessId: string }) {
     setLoading(true)
     const days = parseInt(new FormData(e.currentTarget).get('days') as string)
     try {
-      await extendTrial(businessId, days)
+      await extendTrial({ businessId, days })
       setOpen(false)
       router.refresh()
     } catch (err: any) {
@@ -76,11 +76,11 @@ export function GrantCreditButton({ businessId }: { businessId: string }) {
     setLoading(true)
     const formData = new FormData(e.currentTarget)
     try {
-      await grantPromotionalCredit(
+      await grantPromotionalCredit({
         businessId,
-        parseFloat(formData.get('amount') as string),
-        formData.get('reason') as string
-      )
+        amount: parseFloat(formData.get('amount') as string),
+        reason: formData.get('reason') as string
+      })
       setOpen(false)
       router.refresh()
     } catch (err: any) {

@@ -27,7 +27,7 @@ export default function CreateFlagForm() {
     e.preventDefault()
     setLoading(true)
     try {
-      await createFeatureFlag(id, description, isGlobal)
+      await createFeatureFlag({ id, description, isGlobalEnabled: isGlobal })
       setOpen(false)
       setId('')
       setDescription('')
@@ -41,11 +41,9 @@ export default function CreateFlagForm() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Flag
-        </Button>
+      <DialogTrigger render={<Button />}>
+        <Plus className="w-4 h-4 mr-2" />
+        Create Flag
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

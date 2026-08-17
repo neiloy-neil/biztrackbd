@@ -64,7 +64,9 @@ export async function changePlanAction(formData: FormData) {
   
   if (!newPlan || !sub) throw new Error('Could not verify plans')
 
-  if (newPlan.price_monthly >= sub.plans.price_monthly) {
+  const currentPrice = Array.isArray(sub.plans) ? sub.plans[0]?.price_monthly : (sub.plans as any)?.price_monthly;
+
+  if (newPlan.price_monthly >= (currentPrice || 0)) {
     // UPGRADE: Immediate charge
     return startCheckoutAction(formData)
   } else {

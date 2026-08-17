@@ -53,11 +53,8 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
     setIsSubmitting(true)
     const res = await closeDay({
       date: today,
-      expected_cash: expectedCash,
       actual_cash: actualCash,
-      difference: difference,
-      reason: reason,
-      summary: summary
+      reason: reason
     })
     setIsSubmitting(false)
 

@@ -12,7 +12,7 @@ export default function ToggleCouponButton({ couponId, isActive }: { couponId: s
   async function handleToggle(checked: boolean) {
     setLoading(true)
     try {
-      await toggleCouponActive(couponId, checked)
+      await toggleCouponActive({ couponId, isActive: checked })
       router.refresh()
     } catch (err: any) {
       console.error(err)

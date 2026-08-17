@@ -62,11 +62,10 @@ export const createCoupon = adminAction(async (params: {
     action: 'create_coupon',
     target_type: 'coupon',
     target_id: params.code.toUpperCase(),
-    admin_id: ctx.userId,
-    new_data: { type: params.type, value: params.value, duration: params.duration, target_plan_id: params.target_plan_id, eligibility: params.eligibility }
+    new_state: { type: params.type, value: params.value, duration: params.duration, target_plan_id: params.target_plan_id, eligibility: params.eligibility }
   })
 
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const toggleCouponActive = adminAction(async (params: { couponId: string, isActive: boolean }, ctx) => {
@@ -78,11 +77,10 @@ export const toggleCouponActive = adminAction(async (params: { couponId: string,
   await logPlatformAction({
     action: params.isActive ? 'enable_coupon' : 'disable_coupon',
     target_type: 'coupon',
-    target_id: params.couponId,
-    admin_id: ctx.userId
+    target_id: params.couponId
   })
   
-  return { success: true }
+  return { success: true, data: null }
 })
 
 export const extendTrial = adminAction(async (params: { businessId: string, days: number }, ctx) => {
@@ -95,8 +93,7 @@ export const extendTrial = adminAction(async (params: { businessId: string, days
     action: 'extend_trial',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { days: params.days }
+    new_state: { days: params.days }
   })
 
   return { success: true, data }
@@ -118,9 +115,8 @@ export const grantPromotionalCredit = adminAction(async (params: { businessId: s
     action: 'grant_promotional_credit',
     target_type: 'business',
     target_id: params.businessId,
-    admin_id: ctx.userId,
-    new_data: { amount: params.amount, reason: params.reason }
+    new_state: { amount: params.amount, reason: params.reason }
   })
   
-  return { success: true }
+  return { success: true, data: null }
 })

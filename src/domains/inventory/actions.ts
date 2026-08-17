@@ -23,47 +23,29 @@ export const createProduct = authAction(async (data: {
     return { success: false, error: 'Invalid product details.' }
   }
 
-  const { data: product, error } = await supabase
-    .from('products')
-    .insert({
-      business_id: ctx.businessId,
-      name: data.name,
-      sku: data.sku,
-      barcode: data.barcode,
-      category_id: data.category_id || null,
-      price: data.price,
-      cost: data.cost,
-      unit: data.unit,
-      min_stock: data.min_stock,
-      supplier_id: data.supplier_id || null,
-      image_url: data.image_url
-    })
-    .select()
-    .single()
+  const { data: productId, error } = await supabase.rpc('create_product_atomic', {
+    p_business_id: ctx.businessId,
+    p_name: data.name,
+    p_sku: data.sku || null,
+    p_barcode: data.barcode || null,
+    p_category_id: data.category_id || null,
+    p_price: data.price,
+    p_cost: data.cost,
+    p_unit: data.unit,
+    p_min_stock: data.min_stock,
+    p_supplier_id: data.supplier_id || null,
+    p_image_url: data.image_url || null,
+    p_initial_stock: data.initial_stock || 0,
+    p_created_by: ctx.userId
+  })
 
   if (error) {
-    return { success: false, error: error.message }
-  }
-
-  if (data.initial_stock && data.initial_stock > 0) {
-    const { error: moveError } = await supabase
-      .from('inventory_movements')
-      .insert({
-        product_id: product.id,
-        business_id: ctx.businessId,
-        type: 'adjustment',
-        quantity: data.initial_stock,
-        reason: 'প্রারম্ভিক স্টক (Initial Stock)',
-        created_by: ctx.userId
-      })
-    
-    if (moveError) {
-      console.error('Failed to set initial stock:', moveError)
-    }
+    console.error('Failed to create product:', error)
+    return { success: false, error: 'Product creation failed: ' + error.message }
   }
 
   revalidatePath('/inventory')
-  return { success: true, data: product }
+  return { success: true, data: { id: productId } }
 })
 
 export const getProducts = authAction(async (data: { 

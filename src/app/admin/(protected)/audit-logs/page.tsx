@@ -14,7 +14,7 @@ import { Download, Search, Activity, User, Monitor } from 'lucide-react'
 export default async function PlatformAuditLogsPage({
   searchParams
 }: {
-  searchParams: { q?: string, action?: string }
+  searchParams: { q?: string, action?: string, page?: string }
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,12 +25,16 @@ export default async function PlatformAuditLogsPage({
 
   const query = searchParams.q || ''
   const actionFilter = searchParams.action || ''
+  
+  const page = parseInt(searchParams.page || '1', 10)
+  const pageSize = 50
+  const offset = (page - 1) * pageSize
 
   let dbQuery = supabase
     .from('platform_audit_logs')
-    .select('*, auth_users:actor_id(email)')
+    .select('*, auth_users:actor_id(email)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(100)
+    .range(offset, offset + pageSize - 1)
 
   if (query) {
     dbQuery = dbQuery.or(`target_id.ilike.%${query}%,action.ilike.%${query}%`)
@@ -39,7 +43,8 @@ export default async function PlatformAuditLogsPage({
     dbQuery = dbQuery.eq('action', actionFilter)
   }
 
-  const { data: logs, error } = await dbQuery
+  const { data: logs, count, error } = await dbQuery
+  const totalPages = count ? Math.ceil(count / pageSize) : 1
 
   // Derive unique actions for filter dropdown
   const { data: allActions } = await supabase.from('platform_audit_logs').select('action')
@@ -161,6 +166,26 @@ export default async function PlatformAuditLogsPage({
             </tbody>
           </table>
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+            <div className="text-sm text-slate-500">
+              Page {page} of {totalPages}
+            </div>
+            <div className="flex gap-2">
+              {page > 1 && (
+                <a href={`?page=${page - 1}${query ? `&q=${query}` : ''}${actionFilter ? `&action=${actionFilter}` : ''}`}>
+                  <Button variant="outline" size="sm">Previous</Button>
+                </a>
+              )}
+              {page < totalPages && (
+                <a href={`?page=${page + 1}${query ? `&q=${query}` : ''}${actionFilter ? `&action=${actionFilter}` : ''}`}>
+                  <Button variant="outline" size="sm">Next</Button>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   )

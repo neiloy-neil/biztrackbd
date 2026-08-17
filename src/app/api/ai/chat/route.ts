@@ -30,10 +30,12 @@ export async function POST(req: Request) {
     const businessId = member.business_id
     const businessName = (member.businesses as any)?.name || 'Your Business'
 
-    // Fetch live context (3s timeout — don't block the stream if DB is slow)
-    const insightsPromise = supabase.rpc('get_actionable_insights', { p_business_id: businessId })
-    const timeoutPromise = new Promise<{ data: null }>((resolve) => setTimeout(() => resolve({ data: null }), 3000))
-    const { data: insights } = await Promise.race([insightsPromise, timeoutPromise])
+    // Fetch live context in parallel (3s timeout — don't block the stream)
+    const timeout = <T>(p: Promise<T>) => Promise.race([p, new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 3000)) as Promise<any>])
+    const [{ data: summary }, { data: insights }] = await Promise.all([
+      timeout(supabase.rpc('get_dashboard_summary', { p_business_id: businessId })),
+      timeout(supabase.rpc('get_actionable_insights', { p_business_id: businessId })),
+    ])
 
     // Construct the System Prompt with the live data
     const topDebtors = (insights?.top_debtors || []) as Array<{ name: string; phone?: string; current_due: number }>
@@ -46,17 +48,28 @@ You are speaking to the business owner. Always reply in clear, natural Bengali (
 
 Here is the real-time data for the business right now (use this to answer their questions):
 ---
-Top Debtors (customers who owe money, sorted by amount):
+Today's Financial Summary:
+- মোট বিক্রয় (Total Sales): ৳${summary?.total_sales ?? 0}
+- মোট আয় (Total Income): ৳${summary?.total_income ?? 0}
+- পণ্যের ক্রয়মূল্য (COGS): ৳${summary?.total_cogs ?? 0}
+- গ্রস প্রফিট (Gross Profit): ৳${summary?.gross_profit ?? 0}
+- মোট খরচ (Total Expenses): ৳${summary?.total_expenses ?? 0}
+- নেট প্রফিট (Net Profit): ৳${summary?.net_profit ?? 0}
+- হাতে টাকা (Available Money): ৳${summary?.available_money ?? 0}
+- কাস্টমার বাকি (Customer Due): ৳${summary?.customer_due ?? 0}
+- সাপ্লায়ার বাকি (Supplier Due): ৳${summary?.supplier_due ?? 0}
+
+Top Debtors (customers who owe the most):
 ${topDebtors.length > 0 ? topDebtors.map(d => `- ${d.name}: ৳${d.current_due}`).join('\n') : 'কোনো বাকি নেই'}
 
 Low Stock Products:
-${lowStock.length > 0 ? lowStock.map(p => `- ${p.name}: ${p.current_stock} (min: ${p.min_stock})`).join('\n') : 'কোনো কম স্টক পণ্য নেই'}
+${lowStock.length > 0 ? lowStock.map(p => `- ${p.name}: ${p.current_stock} remaining (min: ${p.min_stock})`).join('\n') : 'কোনো কম স্টক পণ্য নেই'}
 
 Top Selling Products (last 30 days):
 ${topSelling.length > 0 ? topSelling.map(p => `- ${p.name}: ${p.total_sold} sold`).join('\n') : 'কোনো ডেটা নেই'}
 ---
 
-If they ask about data you do not have here (e.g. today's exact sales total, expenses breakdown), politely explain that you only have access to the above data at the moment. Do NOT hallucinate numbers.
+Answer questions using only the data above. Do NOT hallucinate numbers. If something is not in the data, say so clearly.
     `.trim()
 
     const result = streamText({

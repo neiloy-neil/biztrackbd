@@ -2,16 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, Package, Menu, Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
+import { Home, Users, Package, Menu, Plus, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose, DrawerFooter } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 
 import { useState } from 'react'
 import { useKeyboard } from '@/hooks/useKeyboard'
+import { TransferModal } from '@/domains/transactions/components/TransferModal'
 
 export function MobileNav() {
   const pathname = usePathname() || ''
   const [open, setOpen] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
   const isKeyboardOpen = useKeyboard()
 
   if (pathname === '/app/login' || pathname === '/app/pos' || pathname.startsWith('/admin')) return null
@@ -22,6 +24,7 @@ export function MobileNav() {
 
   return (
     <>
+      <TransferModal open={transferOpen} onOpenChange={setTransferOpen} />
       <div className="pb-20" /> {/* Padding for the fixed bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t bg-background px-2 pb-safe md:hidden">
         <Link
@@ -69,6 +72,10 @@ export function MobileNav() {
                   <Users className="h-8 w-8 text-orange-600" />
                   <span className="text-lg">দেনা পরিশোধ</span>
                 </Link>
+                <button onClick={() => { setOpen(false); setTransferOpen(true) }} className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold active:scale-[0.98] w-full">
+                  <ArrowLeftRight className="h-8 w-8 text-purple-600" />
+                  <span className="text-lg">ট্রান্সফার</span>
+                </button>
               </div>
               <DrawerFooter>
                 <DrawerClose className="inline-flex h-9 items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-900 w-full text-slate-600">

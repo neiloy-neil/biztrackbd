@@ -273,3 +273,27 @@ export const getPlans = adminAction(async (_params: void) => {
   }
   return { success: true, data }
 })
+
+export const testSmsGateway = adminAction(async (params: { phone: string }) => {
+  const apiKey = process.env.SMS_NET_BD_API_KEY
+  if (!apiKey) return { success: false, error: 'SMS_NET_BD_API_KEY is not configured.' }
+
+  const digits = params.phone.replace(/\D/g, '')
+  const normalized = digits.startsWith('880') ? digits : digits.startsWith('0') ? `880${digits.slice(1)}` : `880${digits}`
+
+  const msg = `[BizTrack BD] SMS gateway test successful. If you received this, the integration is working.`
+  const body = new URLSearchParams({ api_key: apiKey, msg, to: normalized })
+
+  try {
+    const res = await fetch('https://api.sms.net.bd/sendsms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    const data = await res.json()
+    if (data.error !== 0) return { success: false, error: `SMS gateway error: ${data.msg}` }
+    return { success: true, data: { to: normalized, response: data } }
+  } catch (e: any) {
+    return { success: false, error: e.message }
+  }
+})

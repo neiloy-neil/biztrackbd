@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { FileText, Search, Filter } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,12 +6,13 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export default async function AdminInvoicesPage() {
-  const supabase = await createClient()
+  const supabase = await createAdminAuthClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-  const { data: adminData } = await supabase.from('platform_admins').select('id').eq('user_id', user.id).single()
-  if (!adminData) redirect('/app/dashboard')
+  if (!user) redirect('/admin/login')
+  
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.invoices.view' })
+  if (!hasPermission) redirect('/admin/dashboard')
 
   // Fetch all invoices
   const { data: invoices, error } = await supabase

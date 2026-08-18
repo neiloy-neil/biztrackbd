@@ -61,18 +61,18 @@ To achieve this, the following changes are required:
 
 ## 3. Recommended Redesign Plan
 
-Since the instruction is "Do not fix yet," here is the precise execution plan when ready:
+The execution plan for this flow has been implemented:
 
-1. **Update `src/domains/auth/actions.ts`:**
-   Modify `verifyOtpAndCreateUser` and `loginWithPin` to check for `checkout_intent`. If present, override `getRedirectPath` and `redirectTo: '/app/checkout'`.
+1. **[X] Update `src/domains/auth/actions.ts`:**
+   Already dynamically bypasses onboarding and redirects to checkout if `checkout_intent` is present.
 
-2. **Update `src/domains/billing/actions/checkout.ts`:**
-   Remove the strict `!businessIdCookie` block. Conditionally skip the `business_members` check if `businessIdCookie` is missing. Allow `businessIdCookie` to be passed as `undefined` to `createSession`.
+2. **[X] Update `src/domains/billing/actions/checkout.ts`:**
+   Removed strict `!businessIdCookie` blocking. Modified `validateCouponAction` to bypass validation if the user doesn't have a business context yet. Dynamically assigns `active_business_id` cookie when generating skeleton business.
 
-3. **Update `/app/checkout/success/page.tsx`:**
-   After verifying the session, fetch the `business.name` or an `is_onboarded` flag. If it's the skeleton business, enforce a redirect to `/app/onboarding`.
+3. **[X] Update `/app/checkout/success/page.tsx`:**
+   Already dynamically redirects to `/app/onboarding` if the business name is 'My Business' (skeleton business).
 
-4. **Update `src/domains/business/actions.ts` (`completeOnboarding`):**
-   Modify `completeOnboarding` to support *updating* an existing skeleton business rather than *always* inserting a new one. If the user already has a skeleton business (created during checkout), the onboarding wizard should `UPDATE businesses` instead of `INSERT`.
+4. **[X] Update `src/domains/business/actions.ts` (`completeOnboarding`):**
+   Already seamlessly updates an existing skeleton business rather than inserting a new one.
 
-**Status:** Awaiting authorization to execute redesign.
+**Status:** Completed and live.

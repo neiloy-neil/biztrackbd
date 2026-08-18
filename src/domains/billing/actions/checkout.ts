@@ -69,6 +69,16 @@ export async function processCheckoutIntent(couponCode?: string) {
       const invoice = Array.isArray(existingSession.invoices) ? existingSession.invoices[0] : existingSession.invoices;
       if (existingSession.status === 'payment_started' && invoice?.payment_url) {
         // Resume existing payment
+        
+        if (!businessIdCookie && existingSession.business_id) {
+          cookieStore.set('active_business_id', existingSession.business_id, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/'
+          })
+        }
+
         cookieStore.delete('checkout_intent')
         return { success: true, paymentUrl: invoice.payment_url }
       }
@@ -80,6 +90,16 @@ export async function processCheckoutIntent(couponCode?: string) {
           existingSession.id,
           `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/app/checkout/success?session_id=${existingSession.id}`
         )
+        
+        if (!businessIdCookie && result.businessId) {
+          cookieStore.set('active_business_id', result.businessId, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/'
+          })
+        }
+
         cookieStore.delete('checkout_intent')
         return { success: true, paymentUrl: result.paymentUrl }
       }
@@ -102,7 +122,17 @@ export async function processCheckoutIntent(couponCode?: string) {
       `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/app/checkout/success?session_id=${session.id}`
     )
 
-    // 3. Clear intent cookie on success
+    // 3. Set the business_id cookie if we provisioned a skeleton business
+    if (!businessIdCookie && result.businessId) {
+      cookieStore.set('active_business_id', result.businessId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/'
+      })
+    }
+
+    // 4. Clear intent cookie on success
     cookieStore.delete('checkout_intent')
 
     return { success: true, paymentUrl: result.paymentUrl }
@@ -116,10 +146,6 @@ export async function validateCouponAction(couponCode: string, planId: string, b
   const cookieStore = await cookies()
   const businessIdCookie = cookieStore.get('active_business_id')?.value
 
-  if (!businessIdCookie) {
-    return { success: false, error: 'Unauthorized' }
-  }
-
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -127,20 +153,22 @@ export async function validateCouponAction(couponCode: string, planId: string, b
     return { success: false, error: 'Unauthorized' }
   }
 
-  const { data: membership } = await supabase
-    .from('business_members')
-    .select('id')
-    .eq('business_id', businessIdCookie)
-    .eq('user_id', user.id)
-    .single()
+  if (businessIdCookie) {
+    const { data: membership } = await supabase
+      .from('business_members')
+      .select('id')
+      .eq('business_id', businessIdCookie)
+      .eq('user_id', user.id)
+      .single()
 
-  if (!membership) {
-    return { success: false, error: 'Unauthorized business access' }
+    if (!membership) {
+      return { success: false, error: 'Unauthorized business access' }
+    }
   }
 
   const { data, error } = await supabase.rpc('validate_coupon', {
     p_code: couponCode,
-    p_business_id: businessIdCookie,
+    p_business_id: businessIdCookie || null,
     p_plan_id: planId
   })
 

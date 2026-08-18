@@ -1,12 +1,19 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { redirect, notFound } from 'next/navigation'
-import { ArrowLeft, Mail, Ban, CreditCard, ExternalLink, Download } from 'lucide-react'
+import { ArrowLeft, Mail, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { AdminInvoiceActionsClient } from './AdminInvoiceActionsClient'
 
 export default async function AdminInvoiceDetailPage({ params }: { params: { invoiceId: string } }) {
-  const supabase = await createClient()
+  const supabase = await createAdminAuthClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+  
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.invoices.view' })
+  if (!hasPermission) redirect('/admin/dashboard')
 
   const { data: invoice, error } = await supabase
     .from('invoices')
@@ -45,18 +52,7 @@ export default async function AdminInvoiceDetailPage({ params }: { params: { inv
           {getStatusBadge(invoice.status)}
         </div>
         <div className="flex items-center gap-2">
-          {invoice.status !== 'void' && invoice.status !== 'refunded' && (
-            <Button variant="outline" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
-              <Ban className="w-4 h-4" />
-              Void Invoice
-            </Button>
-          )}
-          {invoice.status === 'paid' && (
-            <Button variant="outline" className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200">
-              <CreditCard className="w-4 h-4" />
-              Issue Credit
-            </Button>
-          )}
+          <AdminInvoiceActionsClient invoiceId={invoice.id} status={invoice.status} />
           <Button variant="outline" className="gap-2">
             <Mail className="w-4 h-4" />
             Resend Email
@@ -90,7 +86,7 @@ export default async function AdminInvoiceDetailPage({ params }: { params: { inv
               <div className="flex items-center gap-2">
                 <p className="text-lg font-semibold text-slate-900">{invoice.business?.name}</p>
                 <Link href={`/admin/businesses/${invoice.business_id}`} target="_blank">
-                  <ExternalLink className="w-4 h-4 text-indigo-500" />
+                  <span className="text-indigo-500 text-xs hover:underline cursor-pointer">View Business</span>
                 </Link>
               </div>
               <p className="text-sm text-slate-500 mt-1">Business ID: {invoice.business_id}</p>

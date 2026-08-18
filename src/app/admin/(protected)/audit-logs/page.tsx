@@ -1,10 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Download, Search, Activity, User, Monitor } from 'lucide-react'
+import Link from 'next/link'
 
 // Note: This is a Server Component. 
 // For real client-side export and dynamic filtering without page reloads, 
@@ -16,12 +17,13 @@ export default async function PlatformAuditLogsPage({
 }: {
   searchParams: { q?: string, action?: string, page?: string }
 }) {
-  const supabase = await createClient()
+  const supabase = await createAdminAuthClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/admin/login')
 
-  const { data: adminData } = await supabase.from('platform_admins').select('*').eq('user_id', user.id).single()
-  if (!adminData) redirect('/app/dashboard')
+  // Check specific permission
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.audit.view' })
+  if (!hasPermission) redirect('/admin/dashboard')
 
   const query = searchParams.q || ''
   const actionFilter = searchParams.action || ''
@@ -80,10 +82,11 @@ export default async function PlatformAuditLogsPage({
             </select>
             <Button type="submit" variant="secondary">Filter</Button>
           </form>
-          {/* Note: Real CSV export typically handled by a client component converting JSON to CSV */}
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
+          <Button variant="outline" asChild>
+            <Link href={`/api/admin/export-audit-logs?q=${encodeURIComponent(query)}&action=${encodeURIComponent(actionFilter)}`}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Link>
           </Button>
         </div>
       </div>

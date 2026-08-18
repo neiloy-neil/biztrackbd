@@ -110,10 +110,7 @@ export const processPOSSale = idempotentAction(async (data: {
     return { success: false, error: 'ফেইল হয়েছে: ' + error.message }
   }
 
-  revalidatePath('/dashboard')
-  revalidatePath('/inventory')
-  revalidatePath('/pos')
-  if (partyId) revalidatePath(`/parties/${partyId}`)
+  revalidatePath('/app', 'layout')
 
   return { success: true, data: transactionId }
 })

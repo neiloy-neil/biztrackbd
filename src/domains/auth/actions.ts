@@ -327,6 +327,21 @@ export async function resetPin(phone: string, otp: string, newPin: string) {
   return { success: true, redirectTo }
 }
 
+export async function loginWithEmail(email: string, password: string) {
+  const isRateLimited = await rateLimit('loginWithEmail')
+  if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error || !data.user) {
+    return { success: false, error: 'ভুল ইমেইল বা পাসওয়ার্ড। (Invalid email or password)' }
+  }
+
+  const redirectTo = await getRedirectPath(data.user.id)
+  return { success: true, redirectTo }
+}
+
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()

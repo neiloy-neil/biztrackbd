@@ -101,7 +101,8 @@ export const createParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authA
   name: string,
   phone?: string,
   address?: string,
-  opening_balance: number
+  opening_balance: number,
+  credit_limit?: number
 }, ctx) => {
   const supabase = await createClient()
 
@@ -113,7 +114,8 @@ export const createParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authA
       name: data.name,
       phone: data.phone,
       address: data.address,
-      opening_balance: data.opening_balance
+      opening_balance: data.opening_balance,
+      credit_limit: data.credit_limit || 0
     })
     .select()
     .single()

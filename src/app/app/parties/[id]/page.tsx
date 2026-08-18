@@ -57,6 +57,12 @@ async function PartyDetails({ id }: { id: string }) {
           <h2 className={`text-4xl font-bold ${currentDue > 0 ? (isCustomer ? 'text-red-500' : 'text-orange-500') : 'text-emerald-500'}`}>
             {formatCurrency(currentDue)}
           </h2>
+          {isCustomer && party.credit_limit > 0 && (
+            <p className="text-sm font-medium mt-2 text-slate-500">
+              বাকির সীমা: {formatCurrency(party.credit_limit)}
+              {currentDue > party.credit_limit && <span className="text-red-500 ml-1">(সীমা অতিক্রম করেছে)</span>}
+            </p>
+          )}
         </CardContent>
       </Card>
 

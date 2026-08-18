@@ -43,12 +43,15 @@ export default function NewPartyPage() {
       }
     }
 
+    const credit_limit = Number(formData.get('credit_limit') || 0)
+
     const res = await createParty({
       type,
       name,
       phone,
       address,
-      opening_balance
+      opening_balance,
+      credit_limit
     })
 
     if (res.success) {
@@ -98,6 +101,11 @@ export default function NewPartyPage() {
             <div className="space-y-2">
               <Label htmlFor="address">ঠিকানা</Label>
               <Textarea id="address" name="address" placeholder="সম্পূর্ণ ঠিকানা" rows={2} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="credit_limit">বাকির সীমা (Credit Limit)</Label>
+              <Input id="credit_limit" name="credit_limit" type="number" min="0" step="1" placeholder="0 (সীমা না থাকলে 0 দিন)" />
             </div>
 
             <div className="border-t pt-4 space-y-4">

@@ -2,7 +2,7 @@ import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity, HeadphonesIcon, Flag, Bell } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity, HeadphonesIcon, Flag, Bell, Shield } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -26,6 +26,8 @@ export default async function AdminLayout({
     .from('platform_notifications')
     .select('*', { count: 'estimated', head: true }) // PERF-02: estimated avoids full table scan
     .eq('is_read', false)
+    
+  const { data: hasTeamPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.admins.manage' })
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -62,6 +64,12 @@ export default async function AdminLayout({
             <Settings size={20} />
             <span>Platform Settings</span>
           </Link>
+          {hasTeamPermission && (
+            <Link href="/admin/team" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+              <Shield size={20} />
+              <span>Platform Team</span>
+            </Link>
+          )}
           <Link href="/admin/support" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
             <HeadphonesIcon size={20} />
             <span>Support Tickets</span>

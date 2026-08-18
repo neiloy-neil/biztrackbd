@@ -102,12 +102,7 @@ export const createTransaction = idempotentAction(async (data: {
     return { success: false, error: 'Transaction failed: ' + txnError.message }
   }
 
-  revalidatePath('/dashboard')
-  revalidatePath('/transactions')
-  revalidatePath('/app/reports') // OBS-02: keep reports in sync
-  if (data.party_id) {
-    revalidatePath(`/parties/${data.party_id}`)
-  }
+  revalidatePath('/app', 'layout')
 
   return { success: true, data: { id: transactionId } }
 })
@@ -132,9 +127,7 @@ export const voidTransaction = idempotentAction(async (data: {
     return { success: false, error: 'Failed to void transaction: ' + error.message }
   }
 
-  revalidatePath('/dashboard')
-  revalidatePath('/transactions')
-  revalidatePath('/inventory')
+  revalidatePath('/app', 'layout')
 
   return { success: true, data: null }
 })
@@ -240,8 +233,7 @@ export const createTransfer = idempotentAction(async (data: {
     return { success: false, error: 'Transfer failed: ' + txnError.message }
   }
 
-  revalidatePath('/dashboard')
-  revalidatePath('/transactions')
+  revalidatePath('/app', 'layout')
   
   return { success: true, data: { id: transactionId } }
 })

@@ -1,10 +1,19 @@
 import { Settings } from 'lucide-react'
 import { getPlatformSettings, getSystemEnvironmentStatus } from '@/domains/admin/settings.actions'
 import { SettingsTabs } from './SettingsTabs'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+import { redirect } from 'next/navigation'
 
 export const metadata = { title: 'Platform Settings | BizTrack Admin' }
 
 export default async function AdminSettingsPage() {
+  const supabase = await createAdminAuthClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+  
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.settings.manage' })
+  if (!hasPermission) redirect('/admin/dashboard')
+
   const settings = await getPlatformSettings()
   const systemStatusRes = await getSystemEnvironmentStatus()
   

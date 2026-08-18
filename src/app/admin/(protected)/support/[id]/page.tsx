@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -9,12 +9,13 @@ import AdminSupportControls from './admin-support-controls'
 import { SecureAttachmentButton } from '@/domains/support/components/secure-attachment-button'
 
 export default async function AdminTicketPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = await createAdminAuthClient()
 
-  const { data: adminData } = await supabase.from('platform_admins').select('*').eq('user_id', user.id).single()
-  if (!adminData) redirect('/app/dashboard')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/admin/login')
+  
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.support.view' })
+  if (!hasPermission) redirect('/admin/dashboard')
 
   // Fetch ticket
   const { data: ticket, error: ticketError } = await supabase

@@ -5,15 +5,19 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { checkUserExists, loginWithPin, sendOtp, verifyOtpAndCreateUser, resetPin } from '../actions'
+import { checkUserExists, loginWithPin, loginWithEmail, sendOtp, verifyOtpAndCreateUser, resetPin } from '../actions'
 
 type Step = 'phone' | 'login_pin' | 'otp' | 'create_pin' | 'forgot_otp' | 'reset_pin'
+type LoginMode = 'phone' | 'email'
 
 export function BusinessLoginForm() {
+  const [mode, setMode] = useState<LoginMode>('phone')
   const [phone, setPhone] = useState('')
   const [pin, setPin] = useState('')
   const [otp, setOtp] = useState('')
-  
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
   const [step, setStep] = useState<Step>('phone')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -170,9 +174,81 @@ export function BusinessLoginForm() {
     setLoading(false)
   }
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const res = await loginWithEmail(email, password)
+    if (!res.success) {
+      setError(res.error || 'লগইন ব্যর্থ হয়েছে।')
+      setLoading(false)
+    } else {
+      router.push(res.redirectTo || '/app/dashboard')
+    }
+  }
+
   return (
     <div className="bg-white px-6 py-8 shadow-sm ring-1 ring-slate-900/5 sm:rounded-2xl border border-slate-100">
-      
+
+      {/* Mode toggle */}
+      <div className="flex rounded-xl bg-slate-100 p-1 mb-6">
+        <button
+          type="button"
+          onClick={() => { setMode('phone'); setError('') }}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${mode === 'phone' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          মোবাইল + পিন
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode('email'); setError('') }}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${mode === 'email' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          ইমেইল + পাসওয়ার্ড
+        </button>
+      </div>
+
+      {/* EMAIL LOGIN */}
+      {mode === 'email' && (
+        <form onSubmit={handleEmailSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-slate-700 font-medium">ইমেইল (Email)</Label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoFocus
+              className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email_password" className="text-slate-700 font-medium">পাসওয়ার্ড (Password)</Label>
+            <input
+              id="email_password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-800 border border-rose-200">
+              {error}
+            </div>
+          )}
+          <Button disabled={loading || !email || !password} type="submit" className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">
+            {loading ? 'লগইন হচ্ছে...' : 'লগইন করুন (Login)'}
+          </Button>
+        </form>
+      )}
+
+      {mode === 'phone' && (
+      <div>
       {/* STEP 1: PHONE */}
       {step === 'phone' && (
         <form onSubmit={handlePhoneSubmit} className="space-y-6">
@@ -206,7 +282,7 @@ export function BusinessLoginForm() {
       )}
 
       {/* STEP 2: LOGIN PIN */}
-      {step === 'login_pin' && (
+      {mode === 'phone' && step === 'login_pin' && (
         <form onSubmit={handleLoginSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="login_pin" className="text-slate-700 font-medium">লগইন পিন দিন (Enter PIN)</Label>
@@ -248,7 +324,7 @@ export function BusinessLoginForm() {
       )}
 
       {/* STEP 3: OTP */}
-      {step === 'otp' && (
+      {mode === 'phone' && step === 'otp' && (
         <form onSubmit={handleOtpSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="otp" className="text-slate-700 font-medium">ওটিপি কোড (OTP Code)</Label>
@@ -293,7 +369,7 @@ export function BusinessLoginForm() {
       )}
 
       {/* STEP 4: CREATE PIN */}
-      {step === 'create_pin' && (
+      {mode === 'phone' && step === 'create_pin' && (
         <form onSubmit={handleCreateAccountSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="create_pin" className="text-slate-700 font-medium">একটি ৬-ডিজিট পিন সেট করুন (Set new PIN)</Label>
@@ -326,7 +402,7 @@ export function BusinessLoginForm() {
       )}
 
       {/* STEP 5: FORGOT PIN — OTP VERIFY */}
-      {step === 'forgot_otp' && (
+      {mode === 'phone' && step === 'forgot_otp' && (
         <form onSubmit={handleForgotOtpSubmit} className="space-y-6">
           <div className="space-y-2">
             <p className="text-sm text-slate-600 text-center">
@@ -370,7 +446,7 @@ export function BusinessLoginForm() {
       )}
 
       {/* STEP 6: FORGOT PIN — NEW PIN */}
-      {step === 'reset_pin' && (
+      {mode === 'phone' && step === 'reset_pin' && (
         <form onSubmit={handleResetPinSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="reset_pin" className="text-slate-700 font-medium">নতুন পিন সেট করুন (Set new PIN)</Label>
@@ -400,6 +476,8 @@ export function BusinessLoginForm() {
             {loading ? 'পিন পরিবর্তন হচ্ছে...' : 'পিন পরিবর্তন করুন (Reset PIN)'}
           </Button>
         </form>
+      )}
+      </div>
       )}
     </div>
   )

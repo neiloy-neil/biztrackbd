@@ -23,23 +23,23 @@ export async function createAdminClient() {
   })
 }
 
-/**
- * Logs a sensitive read action by a Platform Admin.
- * MUST be called with an AUTHENTICATED client (not service_role)
- * so that auth.uid() is properly resolved in PostgreSQL.
- */
 export async function logSensitiveRead(
-  authClient: SupabaseClient, 
-  targetType: string, 
-  targetId: string, 
+  authClient: SupabaseClient,
+  targetType: string,
+  targetId: string,
   actionDesc: string
 ) {
   try {
-    const { error } = await authClient.rpc('log_sensitive_read', {
-      target_type: targetType,
-      target_id: targetId,
-      action_desc: actionDesc
-    })
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return
+    const { error } = await authClient
+      .from('platform_audit_logs')
+      .insert({
+        actor_id: user.id,
+        action: actionDesc,
+        target_type: targetType,
+        target_id: targetId,
+      })
     if (error) console.error('Failed to log sensitive read:', error)
   } catch (err) {
     console.error('Exception logging sensitive read:', err)

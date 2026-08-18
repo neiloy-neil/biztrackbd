@@ -284,6 +284,18 @@ export default function POSClient({
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && search) {
+                  const exactMatch = initialProducts.find(p => p.barcode === search || p.sku === search)
+                  if (exactMatch) {
+                    addToCart(exactMatch)
+                    setSearch('')
+                  } else if (filteredProducts.length === 1) {
+                    addToCart(filteredProducts[0])
+                    setSearch('')
+                  }
+                }
+              }}
               placeholder="পণ্য খুঁজুন (নাম, SKU, বারকোড)..."
               className="pl-10 h-12 text-lg bg-slate-100 border-none"
               autoFocus

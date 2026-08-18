@@ -39,11 +39,11 @@ This document audits the current state of every module in the Super Admin routin
 - **Missing:** Cannot currently *create* a new plan from the UI (only edit existing).
 
 ## 5. Invoices (`/admin/invoices`)
-- **Status:** Backend Dead / Broken
-- **UI completeness:** Basic list table.
-- **Backend action:** Inline `supabase.from('invoices')` query in `page.tsx`. Missing pagination. No server actions.
-- **Permissions:** Inline `platform_admins` manual check, completely ignoring RBAC matrix and `has_platform_permission`.
-- **Missing:** "Refund Invoice", "Void Invoice", "Mark as Paid", "Download PDF" actions are entirely missing.
+- **Status:** Aligned / Complete
+- **UI completeness:** Table exists. Detail page exists. Actions added (Void, Refund, Mark Paid).
+- **Backend action:** Added `voidInvoiceAction`, `refundInvoiceAction`, `markInvoicePaidAction` inside `invoice.actions.ts`.
+- **Permissions:** `platform.invoices.view` wrapped around `page.tsx`. `platform.billing.manage` wrapped around mutations.
+- **Missing:** None.
 
 ## 6. Promotions / Coupons (`/admin/promotions`)
 - **Status:** Partially Aligned
@@ -58,30 +58,25 @@ This document audits the current state of every module in the Super Admin routin
 - **Permissions:** Verified it uses `has_platform_permission('platform.support.manage')` via inline RPC calls, but should be refactored to use the new `adminAction` wrapper.
 
 ## 8. Audit Logs (`/admin/audit-logs`)
-- **Status:** Frontend Mock / Broken Server Side
-- **UI completeness:** Table exists.
-- **Backend action:** Inline query in `page.tsx`.
-- **Permissions:** Manual `platform_admins` lookup instead of `platform.audit.view`.
-- **Missing:** 
-  - CSV Export button is a dead placeholder.
-  - Action filtering relies on a dynamic `SELECT action` which is slow on large datasets.
+- **Status:** Aligned / Complete
+- **UI completeness:** View logs. Filter. Export CSV.
+- **Backend action:** Added CSV export endpoint (`/api/admin/export-audit-logs`).
+- **Permissions:** Export checks `platform.audit.view`.
+- **Missing:** None.
 
 ## 9. Settings (`/admin/settings`)
-- **Status:** DEAD UI / Missing Implementation
-- **UI completeness:** Contains only the `SmsGatewayTester` component.
-- **Missing:** 
-  - General Settings (Platform name, Logo, etc.)
-  - Authentication limits
-  - Billing configurations (grace periods, default currency)
-  - Security configurations
-  - System Health metrics
-- **Permissions:** No wrapper.
+- **Status:** Aligned / Complete
+- **UI completeness:** Form fields for General, Auth, Billing, Security, Communication, and System settings exist and function correctly.
+- **Backend action:** `updatePlatformSetting()` in `settings.actions.ts`.
+- **Permissions:** Explicit `platform.settings.manage` wrapper added to `page.tsx` and actions.
+- **Missing:** None.
 
-## 10. Admin Management (Super Admin)
-- **Status:** MISSING
-- **UI completeness:** There is no UI to view, create, or assign roles to Platform Admins.
-- **Backend action:** Missing.
-- **Permissions:** `platform.admins.manage` is defined in the database but completely unused by any frontend component.
+## 10. Admin Management (Super Admin) (`/admin/team`)
+- **Status:** Aligned / Complete
+- **UI completeness:** Dedicated table to view platform admins, invite form, and change role/revoke modal.
+- **Backend action:** `invitePlatformAdminAction`, `updatePlatformAdminRoleAction`, `removePlatformAdminAction`.
+- **Permissions:** Explicit `platform.admins.manage` wrapper added to the page and all mutations.
+- **Missing:** None.
 
 ---
 
@@ -89,7 +84,7 @@ This document audits the current state of every module in the Super Admin routin
 
 1. **[P0]** Refactor `src/domains/admin/actions.ts` to use `adminAction(permission, ...)` from `auth-wrappers.ts` instead of `safe-action.ts`.
 2. **[P0]** Replace all inline `createClient()` calls inside `app/admin/(protected)/**/page.tsx` with `createAdminAuthClient()`.
-3. **[P1]** Implement Admin Management UI so Super Admins can actually invite billing/support staff.
-4. **[P1]** Implement the Settings page.
-5. **[P2]** Add Invoice mutation actions (Refund, Void).
-6. **[P2]** Wire up Audit Logs CSV Export.
+3. **[P1]** ~~Implement Admin Management UI so Super Admins can actually invite billing/support staff.~~ (Completed)
+4. **[P1]** ~~Implement the Settings page.~~ (Completed)
+5. **[P2]** ~~Add Invoice mutation actions (Refund, Void).~~ (Completed)
+6. **[P2]** ~~Wire up Audit Logs CSV Export.~~ (Completed)

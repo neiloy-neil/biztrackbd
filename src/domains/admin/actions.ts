@@ -3,11 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logPlatformAction } from '@/lib/security/audit'
-import { adminAction } from '@/lib/actions/safe-action'
+import { adminAction } from '@/lib/auth-wrappers'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createPlatformNotification } from './notifications'
 
-export const getPlatformMetrics = adminAction(async (_params: void) => {
+export const getPlatformMetrics = adminAction('platform.dashboard.view', async (_params: void, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_metrics_summary')
   if (error) return { success: false, error: error.message }
@@ -17,7 +17,7 @@ export const getPlatformMetrics = adminAction(async (_params: void) => {
   return { success: true, data }
 })
 
-export const getPlatformGrowth = adminAction(async (_params: void) => {
+export const getPlatformGrowth = adminAction('platform.dashboard.view', async (_params: void, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_growth_data')
   if (error) return { success: false, error: error.message }
@@ -27,7 +27,7 @@ export const getPlatformGrowth = adminAction(async (_params: void) => {
   return { success: true, data }
 })
 
-export const fetchBusinessesList = adminAction(async (params: { searchQuery?: string, filterStatus?: string, filterPlan?: string }) => {
+export const fetchBusinessesList = adminAction('platform.businesses.view', async (params: { searchQuery?: string, filterStatus?: string, filterPlan?: string }, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_businesses_list', {
     search_query: params.searchQuery || null,
@@ -44,7 +44,7 @@ export const fetchBusinessesList = adminAction(async (params: { searchQuery?: st
 
 import { logSensitiveRead } from '@/lib/supabase/admin'
 
-export const fetchBusinessDetail = adminAction(async (params: { businessId: string }) => {
+export const fetchBusinessDetail = adminAction('platform.businesses.view', async (params: { businessId: string }, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_business_detail', {
     p_business_id: params.businessId
@@ -61,7 +61,7 @@ export const fetchBusinessDetail = adminAction(async (params: { businessId: stri
   return { success: true, data }
 })
 
-export const suspendBusinessAction = adminAction(async (params: { businessId: string, reason: string }, ctx) => {
+export const suspendBusinessAction = adminAction('platform.businesses.manage', async (params: { businessId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('suspend_business', {
     p_business_id: params.businessId,
@@ -82,7 +82,7 @@ export const suspendBusinessAction = adminAction(async (params: { businessId: st
   return { success: true, data: null }
 })
 
-export const reactivateBusinessAction = adminAction(async (params: { businessId: string, reason: string }, ctx) => {
+export const reactivateBusinessAction = adminAction('platform.businesses.manage', async (params: { businessId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('reactivate_business', {
     p_business_id: params.businessId,
@@ -103,7 +103,7 @@ export const reactivateBusinessAction = adminAction(async (params: { businessId:
   return { success: true, data: null }
 })
 
-export const deleteBusinessAction = adminAction(async (params: { businessId: string, reason: string }, ctx) => {
+export const deleteBusinessAction = adminAction('platform.businesses.manage', async (params: { businessId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('soft_delete_business', {
     p_business_id: params.businessId,
@@ -123,7 +123,7 @@ export const deleteBusinessAction = adminAction(async (params: { businessId: str
   return { success: true, data: null }
 })
 
-export const updateBusinessPlanAction = adminAction(async (params: { businessId: string, planId: string, reason: string }, ctx) => {
+export const updateBusinessPlanAction = adminAction('platform.businesses.manage', async (params: { businessId: string, planId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('admin_update_business_plan', {
     p_business_id: params.businessId,
@@ -155,7 +155,7 @@ export const updateBusinessPlanAction = adminAction(async (params: { businessId:
   return { success: true, data: null }
 })
 
-export const fetchPlatformUsersList = adminAction(async (params: { searchQuery?: string, filterStatus?: string }) => {
+export const fetchPlatformUsersList = adminAction('platform.users.view', async (params: { searchQuery?: string, filterStatus?: string }, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_platform_users_list', {
     search_query: params.searchQuery || null,
@@ -169,7 +169,7 @@ export const fetchPlatformUsersList = adminAction(async (params: { searchQuery?:
   return { success: true, data: data || [] }
 })
 
-export const fetchPlatformUserDetail = adminAction(async (params: { userId: string }) => {
+export const fetchPlatformUserDetail = adminAction('platform.users.view', async (params: { userId: string }, ctx) => {
   const adminSupabase = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -225,7 +225,7 @@ export const fetchPlatformUserDetail = adminAction(async (params: { userId: stri
   }
 })
 
-export const suspendUserAction = adminAction(async (params: { userId: string, reason: string }, ctx) => {
+export const suspendUserAction = adminAction('platform.users.manage', async (params: { userId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('suspend_platform_user', {
     p_user_id: params.userId,
@@ -246,7 +246,7 @@ export const suspendUserAction = adminAction(async (params: { userId: string, re
   return { success: true, data: null }
 })
 
-export const reactivateUserAction = adminAction(async (params: { userId: string, reason: string }, ctx) => {
+export const reactivateUserAction = adminAction('platform.users.manage', async (params: { userId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('reactivate_platform_user', {
     p_user_id: params.userId,
@@ -267,7 +267,7 @@ export const reactivateUserAction = adminAction(async (params: { userId: string,
   return { success: true, data: null }
 })
 
-export const forceLogoutUserAction = adminAction(async (params: { userId: string, reason: string }, ctx) => {
+export const forceLogoutUserAction = adminAction('platform.users.manage', async (params: { userId: string, reason: string }, ctx) => {
   const supabase = await createClient()
   const { error } = await supabase.rpc('force_logout_user', {
     p_user_id: params.userId,
@@ -287,7 +287,7 @@ export const forceLogoutUserAction = adminAction(async (params: { userId: string
   return { success: true, data: null }
 })
 
-export const getPlans = adminAction(async (_params: void) => {
+export const getPlans = adminAction('platform.plans.manage', async (_params: void, ctx) => {
   const supabase = await createClient()
   const { data, error } = await supabase.from('plans').select('*, plan_features(*)').order('price_monthly', { ascending: true })
   if (error) {
@@ -297,7 +297,7 @@ export const getPlans = adminAction(async (_params: void) => {
   return { success: true, data }
 })
 
-export const updatePlanAction = adminAction(async (params: {
+export const updatePlanAction = adminAction('platform.plans.manage', async (params: {
   planId: string
   name?: string
   description?: string
@@ -326,7 +326,7 @@ export const updatePlanAction = adminAction(async (params: {
   return { success: true, data: null }
 })
 
-export const updatePlanFeatureAction = adminAction(async (params: {
+export const updatePlanFeatureAction = adminAction('platform.plans.manage', async (params: {
   planId: string
   featureKey: string
   limitValue: number | null
@@ -353,7 +353,7 @@ export const updatePlanFeatureAction = adminAction(async (params: {
   return { success: true, data: null }
 })
 
-export const testSmsGateway = adminAction(async (params: { phone: string }) => {
+export const testSmsGateway = adminAction('platform.settings.manage', async (params: { phone: string }, ctx) => {
   const apiKey = process.env.SMS_NET_BD_API_KEY
   if (!apiKey) return { success: false, error: 'SMS_NET_BD_API_KEY is not configured.' }
 

@@ -1,26 +1,101 @@
-import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/session'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
 export async function proxy(request: NextRequest) {
-  const url = request.nextUrl
-  let hostname = request.headers.get('host') || ''
+  const host = request.headers.get('host') || ''
+  const isLocalhost = host.includes('localhost')
 
-  // Support local development (e.g. app.localhost:3000)
-  const host = hostname.split(':')[0]
+  // Define domains
+  const isAdminDomain = host.startsWith('admin.') || (isLocalhost && request.nextUrl.pathname.startsWith('/admin'))
+  const isAppDomain = host.startsWith('app.') || (isLocalhost && request.nextUrl.pathname.startsWith('/app'))
 
-  let rewriteUrl: URL | null = null
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  if (host === 'admin.biztrack.com' || host === 'admin.localhost') {
-    rewriteUrl = new URL(`/admin${url.pathname === '/' ? '' : url.pathname}${url.search}`, request.url)
-  } else if (host === 'app.biztrack.com' || host === 'app.localhost') {
-    rewriteUrl = new URL(`/app${url.pathname === '/' ? '' : url.pathname}${url.search}`, request.url)
+  // ==========================================
+  // ADMIN PLANE AUTHENTICATION
+  // ==========================================
+  if (isAdminDomain) {
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+            response = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+        cookieOptions: {
+          name: 'sb-admin-auth-token'
+        }
+      }
+    )
+
+    const { data: { user } } = await adminSupabase.auth.getUser()
+    
+    // Protect /admin routes (except login)
+    if (request.nextUrl.pathname !== '/admin/login' && request.nextUrl.pathname.startsWith('/admin')) {
+      if (!user) {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    }
+    
+    // Redirect /admin/login to dashboard if already logged in
+    if (request.nextUrl.pathname === '/admin/login' && user) {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+    }
+    
+    return response
   }
 
-  // Refresh Supabase session cookie and run admin check for /admin/* routes
-  const response = await updateSession(request)
+  // ==========================================
+  // BUSINESS PLANE AUTHENTICATION
+  // ==========================================
+  if (isAppDomain) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+            response = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+        // Uses default cookie prefix: sb-[ref]-auth-token
+      }
+    )
 
-  if (rewriteUrl) {
-    return NextResponse.rewrite(rewriteUrl, { headers: response.headers })
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const isLoginPage = request.nextUrl.pathname.endsWith('/login') || request.nextUrl.pathname === '/'
+    
+    if (!user && !isLoginPage) {
+      const loginUrl = isLocalhost ? '/app/login' : '/login'
+      return NextResponse.redirect(new URL(loginUrl, request.url))
+    }
+
+    if (user && isLoginPage) {
+      const dashboardUrl = isLocalhost ? '/app/dashboard' : '/dashboard'
+      return NextResponse.redirect(new URL(dashboardUrl, request.url))
+    }
   }
 
   return response

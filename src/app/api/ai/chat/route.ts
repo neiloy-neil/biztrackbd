@@ -33,8 +33,8 @@ export async function POST(req: Request) {
     // Fetch live context in parallel (3s timeout — don't block the stream)
     const timeout = <T>(p: Promise<T>) => Promise.race([p, new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 3000)) as Promise<any>])
     const [{ data: summary }, { data: insights }] = await Promise.all([
-      timeout(supabase.rpc('get_dashboard_summary', { p_business_id: businessId })),
-      timeout(supabase.rpc('get_actionable_insights', { p_business_id: businessId })),
+      timeout(Promise.resolve(supabase.rpc('get_dashboard_summary', { p_business_id: businessId }))),
+      timeout(Promise.resolve(supabase.rpc('get_actionable_insights', { p_business_id: businessId }))),
     ])
 
     // Construct the System Prompt with the live data

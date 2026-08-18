@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
 type Account = { id: string; name: string; type: string }
-type TransactionType = 'sale' | 'expense' | 'payment_in' | 'payment_out'
+type TransactionType = 'sale' | 'purchase' | 'expense' | 'payment_in' | 'payment_out'
 
 type ActionConfig = {
   type: TransactionType

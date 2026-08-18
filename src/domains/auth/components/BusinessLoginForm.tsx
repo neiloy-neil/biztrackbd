@@ -9,7 +9,7 @@ import { checkUserExists, loginWithPin, sendOtp, verifyOtpAndCreateUser, resetPi
 
 type Step = 'phone' | 'login_pin' | 'otp' | 'create_pin' | 'forgot_otp' | 'reset_pin'
 
-export function LoginForm() {
+export function BusinessLoginForm() {
   const [phone, setPhone] = useState('')
   const [pin, setPin] = useState('')
   const [otp, setOtp] = useState('')

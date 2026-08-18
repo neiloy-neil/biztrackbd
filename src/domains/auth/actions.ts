@@ -47,6 +47,14 @@ async function getRedirectPath(userId: string): Promise<string> {
   // Not an admin, or Admin logging in via normal app portal -> go to app
   const appPrefix = isLocalhost ? '/app' : ''
   
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  const checkoutIntent = cookieStore.get('checkout_intent')?.value
+
+  if (checkoutIntent) {
+    return `${appPrefix}/checkout`
+  }
+
   const { data: member } = await supabase
     .from('business_members')
     .select('business_id')
@@ -55,8 +63,6 @@ async function getRedirectPath(userId: string): Promise<string> {
     .single()
     
   if (member) {
-    const { cookies } = await import('next/headers')
-    const cookieStore = await cookies()
     cookieStore.set('active_business_id', member.business_id, {
       path: '/',
       maxAge: 60 * 60 * 24 * 30 // 30 days
@@ -244,6 +250,14 @@ export async function verifyOtpAndCreateUser(phone: string, token: string, pin: 
   
   const appPrefix = isLocalhost ? '/app' : ''
   
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  const checkoutIntent = cookieStore.get('checkout_intent')?.value
+
+  if (checkoutIntent) {
+    return { success: true, redirectTo: `${appPrefix}/checkout` }
+  }
+  
   // Brand new user always goes to onboarding
   return { success: true, redirectTo: `${appPrefix}/onboarding` }
 }
@@ -322,13 +336,12 @@ export async function logout() {
   cookieStore.delete('active_business_id')
   
   const headersList = await headers()
-  const referer = headersList.get('referer') || ''
   const host = headersList.get('host') || ''
   const isLocalhost = host.includes('localhost') && !host.includes('app.localhost') && !host.includes('admin.localhost')
   
   if (isLocalhost) {
-    redirect(referer.includes('/admin') ? '/admin/login' : '/app/login')
+    redirect('/app/login')
   } else {
-    redirect('/login')
+    redirect('/login') // app.biztrackbd.com/login is routed here
   }
 }

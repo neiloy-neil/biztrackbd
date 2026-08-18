@@ -83,7 +83,8 @@ export async function changePlanAction(formData: FormData) {
     // UPGRADE: Redirect to Checkout Flow
     // Save the intent as a cookie 
     const { cookies } = await import('next/headers')
-    cookies().set('checkout_intent', JSON.stringify({ planId, cycle: billingCycle }), {
+    const cookieStore = await cookies()
+    cookieStore.set('checkout_intent', JSON.stringify({ planId, cycle: billingCycle }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

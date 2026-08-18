@@ -25,13 +25,30 @@ export async function completeOnboarding(payload: {
     return { success: false, error: 'Unauthorized' }
   }
 
+  const cookieStore = await cookies()
+  let existingBusinessId = cookieStore.get('active_business_id')?.value
+
+  if (existingBusinessId) {
+    // Only pass it if it's the skeleton business to prevent overwriting active ones
+    const { data: existingBiz } = await supabase
+      .from('businesses')
+      .select('name')
+      .eq('id', existingBusinessId)
+      .single()
+      
+    if (existingBiz?.name !== 'My Business') {
+      existingBusinessId = undefined
+    }
+  }
+
   // 2. Call the RPC
   const { data: businessId, error: rpcError } = await supabase.rpc('complete_onboarding', {
     p_business_name: payload.businessName,
     p_category: payload.category,
     p_owner_name: payload.ownerName,
     p_payment_methods: payload.paymentMethods,
-    p_opening_balances: payload.openingBalances
+    p_opening_balances: payload.openingBalances,
+    p_existing_business_id: existingBusinessId || null
   })
 
   if (rpcError || !businessId) {
@@ -40,7 +57,6 @@ export async function completeOnboarding(payload: {
   }
 
   // 3. Set the active business cookie
-  const cookieStore = await cookies()
   cookieStore.set('active_business_id', businessId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

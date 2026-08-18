@@ -155,8 +155,8 @@ export async function resolveTicket(ticketId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const { data: isSuperAdmin } = await supabase.rpc('is_platform_admin')
-  if (!isSuperAdmin) throw new Error('Unauthorized')
+  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.support.manage' })
+  if (!hasPermission) throw new Error('Unauthorized')
 
   const { error } = await supabase
     .from('support_tickets')

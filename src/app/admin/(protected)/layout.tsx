@@ -1,3 +1,4 @@
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -8,26 +9,18 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-
-  // 1. Check Session
-  const { data: { user } } = await supabase.auth.getUser()
+  const adminClient = await createAdminAuthClient()
+  const { data: { user }, error } = await adminClient.auth.getUser()
   
-  if (!user) {
-    redirect('/login')
+  if (error || !user) {
+    // Invalid or expired admin token
+    redirect('/admin/login')
   }
 
-  // 2. Check Admin Privileges
-  const { data: adminData } = await supabase
-    .from('platform_admins')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!adminData) {
-    // If not an admin, boot them to the regular app dashboard
-    redirect('/app/dashboard')
-  }
+  // We are safely authenticated as an admin on the PRIMARY Supabase project.
+  // We can use createClient() or adminClient (they hit the same DB) 
+  // to fetch data, but using createClient is standard for data fetching.
+  const supabase = await createClient()
 
   const { count: unreadCount } = await supabase
     .from('platform_notifications')
@@ -103,7 +96,11 @@ export default async function AdminLayout({
               {user.email}
             </div>
           </div>
-          <form action="/auth/signout" method="POST" className="mt-4">
+          <form action={async () => {
+            'use server'
+            const { logoutAdmin } = await import('@/domains/auth/admin-actions')
+            await logoutAdmin()
+          }} className="mt-4">
             <button className="flex w-full items-center space-x-3 text-gray-400 hover:text-white transition-colors">
               <LogOut size={20} />
               <span>Sign out</span>

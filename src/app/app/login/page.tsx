@@ -1,4 +1,4 @@
-import { LoginForm } from '@/domains/auth/components/LoginForm'
+import { BusinessLoginForm } from '@/domains/auth/components/BusinessLoginForm'
 
 export default async function LoginPage() {
   return (
@@ -14,7 +14,7 @@ export default async function LoginPage() {
           </p>
         </div>
         
-        <LoginForm />
+        <BusinessLoginForm />
       </div>
     </div>
   )

@@ -11,7 +11,7 @@ export async function processCheckoutIntent(couponCode?: string) {
   const intentCookie = cookieStore.get('checkout_intent')?.value
   const businessIdCookie = cookieStore.get('active_business_id')?.value
 
-  if (!intentCookie || !businessIdCookie) {
+  if (!intentCookie) {
     return { success: false, error: 'Checkout session expired or invalid' }
   }
 
@@ -29,38 +29,48 @@ export async function processCheckoutIntent(couponCode?: string) {
     return { success: false, error: 'Unauthorized' }
   }
 
-  // HARDEN: Verify business membership
-  const { data: membership } = await supabase
-    .from('business_members')
-    .select('id')
-    .eq('business_id', businessIdCookie)
-    .eq('user_id', user.id)
-    .single()
+  // HARDEN: Verify business membership only if they have a business context
+  if (businessIdCookie) {
+    const { data: membership } = await supabase
+      .from('business_members')
+      .select('id')
+      .eq('business_id', businessIdCookie)
+      .eq('user_id', user.id)
+      .single()
 
-  if (!membership) {
-    return { success: false, error: 'Unauthorized business access' }
+    if (!membership) {
+      return { success: false, error: 'Unauthorized business access' }
+    }
   }
 
   try {
     // 1. Look for existing unexpired session to prevent duplicate invoice spam
-    const { data: existingSession } = await supabase
+    let query = supabase
       .from('checkout_sessions')
       .select('id, status, invoice_id, invoices(payment_url)')
       .eq('user_id', user.id)
-      .eq('business_id', businessIdCookie)
       .eq('plan_id', intent.planId)
       .eq('billing_cycle', intent.cycle)
       .in('status', ['pending', 'payment_started'])
       .gt('expires_at', new Date().toISOString())
+      
+    if (businessIdCookie) {
+      query = query.eq('business_id', businessIdCookie)
+    } else {
+      query = query.is('business_id', null)
+    }
+
+    const { data: existingSession } = await query
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
     if (existingSession) {
-      if (existingSession.status === 'payment_started' && existingSession.invoices?.payment_url) {
+      const invoice = Array.isArray(existingSession.invoices) ? existingSession.invoices[0] : existingSession.invoices;
+      if (existingSession.status === 'payment_started' && invoice?.payment_url) {
         // Resume existing payment
         cookieStore.delete('checkout_intent')
-        return { success: true, paymentUrl: existingSession.invoices.payment_url }
+        return { success: true, paymentUrl: invoice.payment_url }
       }
       
       if (existingSession.status === 'pending') {

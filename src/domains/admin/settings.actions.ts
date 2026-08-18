@@ -24,8 +24,7 @@ export async function getPlatformSettings() {
   return settings
 }
 
-export async function updatePlatformSetting(formData: FormData) {
-  return adminAction('platform.settings.manage', async ({ user: admin }) => {
+export const updatePlatformSetting = adminAction<FormData, any>('platform.settings.manage', async (formData, { user: admin }) => {
     const key = formData.get('key') as string
     const valueStr = formData.get('value') as string
     
@@ -80,10 +79,8 @@ export async function updatePlatformSetting(formData: FormData) {
     revalidatePath('/admin/settings')
     return { success: true }
   })
-}
 
-export async function getSystemEnvironmentStatus() {
-  return adminAction('platform.settings.manage', async () => {
+export const getSystemEnvironmentStatus = adminAction<void, any>('platform.settings.manage', async () => {
   // Returns status of environment variables without leaking secrets
   return {
     success: true,
@@ -98,5 +95,4 @@ export async function getSystemEnvironmentStatus() {
       nodeEnv: process.env.NODE_ENV,
     }
   }
-  })
-}
+})

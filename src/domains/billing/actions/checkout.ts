@@ -47,7 +47,7 @@ export async function processCheckoutIntent(couponCode?: string) {
     // 1. Look for existing unexpired session to prevent duplicate invoice spam
     let query = supabase
       .from('checkout_sessions')
-      .select('id, status, invoice_id, invoices(payment_url)')
+      .select('id, status, invoice_id, business_id, invoices(payment_url)')
       .eq('user_id', user.id)
       .eq('plan_id', intent.planId)
       .eq('billing_cycle', intent.cycle)

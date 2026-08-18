@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -76,8 +76,8 @@ export function AdminTeamClient({ admins, currentUserEmail }: { admins: any[], c
           <CardDescription>Manage staff who have access to the platform dashboard.</CardDescription>
         </div>
         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-          <DialogTrigger asChild>
-            <Button>Invite Admin</Button>
+          <DialogTrigger className={buttonVariants({ variant: 'default' })}>
+            Invite Admin
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -100,7 +100,7 @@ export function AdminTeamClient({ admins, currentUserEmail }: { admins: any[], c
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Platform Role</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
+                <Select value={inviteRole} onValueChange={(val) => setInviteRole(val as string)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -190,7 +190,7 @@ export function AdminTeamClient({ admins, currentUserEmail }: { admins: any[], c
             <form onSubmit={handleUpdateRole} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Platform Role</Label>
-                <Select value={editRole} onValueChange={setEditRole}>
+                <Select value={editRole} onValueChange={(val) => setEditRole(val as string)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>

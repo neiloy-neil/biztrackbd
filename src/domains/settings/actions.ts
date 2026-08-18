@@ -5,7 +5,7 @@ import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
-import { canUseFeature } from '@/domains/saas/entitlements'
+import { canUseFeature, getLimit } from '@/domains/saas/entitlements'
 
 // ── Business ──────────────────────────────────────────────────────────────────
 
@@ -231,6 +231,20 @@ export const createBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authA
   phone?: string
 }, ctx) => {
   const supabase = await createClient()
+
+  // Enforce max_branches plan limit. usage_records doesn't track branch counts
+  // (they're a capacity limit, not a metered resource), so we count directly.
+  const branchLimit = await getLimit(ctx.businessId, 'max_branches')
+  if (branchLimit !== null && branchLimit !== undefined && branchLimit !== 0) {
+    const { count } = await supabase
+      .from('branches')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', ctx.businessId)
+    if (count !== null && count >= branchLimit) {
+      return { success: false, error: `Branch limit reached for your plan (maximum ${branchLimit}). Upgrade to add more branches.` }
+    }
+  }
+
   const { data: branch, error } = await supabase
     .from('branches')
     .insert({

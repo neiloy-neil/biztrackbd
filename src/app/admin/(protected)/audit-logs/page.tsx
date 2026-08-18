@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Download, Search, Activity, User, Monitor } from 'lucide-react'
 import Link from 'next/link'
 
@@ -82,12 +82,10 @@ export default async function PlatformAuditLogsPage({
             </select>
             <Button type="submit" variant="secondary">Filter</Button>
           </form>
-          <Button variant="outline" asChild>
-            <Link href={`/api/admin/export-audit-logs?q=${encodeURIComponent(query)}&action=${encodeURIComponent(actionFilter)}`}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Link>
-          </Button>
+          <Link href={`/api/admin/export-audit-logs?q=${encodeURIComponent(query)}&action=${encodeURIComponent(actionFilter)}`} className={buttonVariants({ variant: 'outline' })}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Link>
         </div>
       </div>
 

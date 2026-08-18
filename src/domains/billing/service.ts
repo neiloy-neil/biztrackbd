@@ -190,7 +190,8 @@ export class BillingService {
 
     return {
       invoiceId: invoice.id,
-      paymentUrl: checkoutResponse.paymentUrl
+      paymentUrl: checkoutResponse.paymentUrl,
+      businessId
     }
   }
 

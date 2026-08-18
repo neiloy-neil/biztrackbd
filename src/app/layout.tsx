@@ -5,7 +5,9 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { OfflineSyncProvider } from "@/components/providers/OfflineSyncProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { TopHeader } from "@/components/layout/TopHeader";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
+import { VoiceAccountingFab } from "@/domains/ai/components/VoiceAccountingFab";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,14 +60,29 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background">
-        <OfflineSyncProvider>
-          <QueryProvider>
-            {children}
-            <OfflineIndicator />
+        <QueryProvider>
+          <OfflineSyncProvider>
+            {/* Top Navigation */}
+            <TopHeader />
+            
+            {/* Main Content Area */}
+            <main className="flex-1 w-full bg-slate-50 md:pl-20 pb-16 md:pb-0 overflow-y-auto mt-14 md:mt-0">
+              {children}
+            </main>
+            
+            {/* Bottom Navigation for Mobile / Side for Desktop */}
             <MobileNav />
-            <Toaster />
-          </QueryProvider>
-        </OfflineSyncProvider>
+
+            {/* Offline Status Indicator */}
+            <OfflineIndicator />
+
+            {/* AI Voice FAB */}
+            <VoiceAccountingFab />
+            
+            {/* Notifications */}
+            <Toaster position="top-center" richColors />
+          </OfflineSyncProvider>
+        </QueryProvider>
       </body>
     </html>
   );

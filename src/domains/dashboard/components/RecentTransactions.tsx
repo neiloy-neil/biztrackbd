@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getRecentTransactions } from '../actions'
 import { formatBanglaCurrency } from '@/lib/utils/bangla'
 import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
+import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
 
 export async function RecentTransactions() {
   const res = await getRecentTransactions({ limit: 5 })
@@ -37,7 +38,10 @@ export async function RecentTransactions() {
                     {['sale', 'payment_in'].includes(txn.type) ? '+' : '-'} ৳ {formatBanglaCurrency(txn.total_amount)}
                   </div>
                 </div>
-                <TransactionAudit transactionId={txn.id} />
+                <div className="flex items-center justify-between mt-2">
+                  <TransactionAudit transactionId={txn.id} />
+                  <VoidTransactionButton transactionId={txn.id} state={txn.state} />
+                </div>
               </div>
             ))}
           </div>

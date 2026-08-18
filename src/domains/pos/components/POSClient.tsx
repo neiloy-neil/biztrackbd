@@ -110,7 +110,16 @@ export default function POSClient({
   }
 
   const removeFromCart = (productId: string) => {
+    const itemToRemove = cart.find(item => item.product.id === productId)
+    if (!itemToRemove) return
     setCart(prev => prev.filter(item => item.product.id !== productId))
+    toast.success(`${itemToRemove.product.name} সরানো হয়েছে`, {
+      action: {
+        label: 'Undo',
+        onClick: () => setCart(prev => [...prev, itemToRemove])
+      },
+      duration: 3000
+    })
   }
 
   const saveItemEdit = (productId: string, newUnitPrice: number, newQuantity: number) => {
@@ -381,11 +390,11 @@ export default function POSClient({
                   <div className="font-bold text-slate-900">৳{item.subtotal}</div>
                 </div>
                 <div className="flex flex-col gap-1 ml-1">
-                  <button onClick={() => setEditingItem(item)} className="text-slate-400 hover:text-slate-600 p-1">
-                    <Edit2 className="w-4 h-4" />
+                  <button onClick={() => setEditingItem(item)} className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                    <Edit2 className="w-5 h-5" />
                   </button>
-                  <button onClick={() => removeFromCart(item.product.id)} className="text-rose-400 hover:text-rose-600 p-1">
-                    <Trash2 className="w-4 h-4" />
+                  <button onClick={() => removeFromCart(item.product.id)} className="w-11 h-11 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>

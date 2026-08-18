@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Lock, Calculator, TrendingUp, TrendingDown, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { Lock, Calculator, TrendingUp, TrendingDown, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react'
 import { closeDay } from '../actions'
 import { toast } from 'sonner'
 import { AppLink as Link } from '@/components/AppLink'
@@ -32,6 +33,7 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
   const [actualCashStr, setActualCashStr] = useState('')
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   const expectedCash = isClosed ? record.expected_cash : summary.expected_cash
   const actualCash = parseFloat(actualCashStr) || 0
@@ -75,6 +77,7 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
     if (res?.success) {
       toast.success('আজকের হিসাব সফলভাবে ক্লোজ করা হয়েছে')
       window.location.reload()
+      router.refresh()
     } else {
       toast.error(res?.error || 'ব্যর্থ হয়েছে')
     }
@@ -196,7 +199,11 @@ export function ClosingClient({ today, closingData }: ClosingClientProps) {
                 disabled={isSubmitting} 
                 className="w-full h-12 text-base font-semibold"
               >
-                আজকের হিসাব লক করুন
+                {isSubmitting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> ক্লোজ হচ্ছে...</>
+                ) : (
+                  'আজকের হিসাব লক করুন'
+                )}
               </Button>
             </CardFooter>
           </RequirePermission>

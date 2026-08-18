@@ -1,5 +1,7 @@
 import { Suspense } from 'react'
 import { getProducts } from '@/domains/inventory/actions'
+import { getInventoryStats } from '@/domains/inventory/stats-actions'
+import { ProductList } from '@/domains/inventory/components/ProductList'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,11 +15,15 @@ export default async function InventoryDashboardPage({
 }) {
   const resolvedSearchParams = await searchParams
   const isLowStockOnly = resolvedSearchParams.lowStock === 'true'
-  const res = await getProducts({ search: resolvedSearchParams.search, lowStockOnly: isLowStockOnly })
-  const products = res.success ? (res.data as any[]) : []
+  const search = resolvedSearchParams.search
 
-  const totalValue = products.reduce((sum, p) => sum + (Number(p.current_stock) * Number(p.price)), 0)
-  const lowStockCount = products.filter(p => Number(p.current_stock) <= Number(p.min_stock)).length
+  const [productsRes, statsRes] = await Promise.all([
+    getProducts({ search, lowStockOnly: isLowStockOnly, limit: 50, page: 1 }),
+    getInventoryStats()
+  ])
+  
+  const products = productsRes.success ? (productsRes.data as any[]) : []
+  const stats = statsRes?.success ? statsRes.data : { total_items: 0, total_value: 0, low_stock_count: 0 }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(amount))
@@ -48,7 +54,7 @@ export default async function InventoryDashboardPage({
             <Package className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{products.length}</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.total_items}</div>
           </CardContent>
         </Card>
 
@@ -58,7 +64,7 @@ export default async function InventoryDashboardPage({
             <span className="text-xl font-bold text-slate-400">৳</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{formatCurrency(totalValue)}</div>
+            <div className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_value)}</div>
           </CardContent>
         </Card>
 
@@ -68,7 +74,7 @@ export default async function InventoryDashboardPage({
             <AlertTriangle className="h-4 w-4 text-rose-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-600">{lowStockCount}</div>
+            <div className="text-2xl font-bold text-rose-600">{stats.low_stock_count}</div>
             <Link href="?lowStock=true" className="text-xs text-rose-500 hover:underline">
               দেখুন &rarr;
             </Link>
@@ -81,12 +87,12 @@ export default async function InventoryDashboardPage({
           <form className="flex gap-2 max-w-sm">
             <Input 
               name="search" 
-              defaultValue={resolvedSearchParams.search} 
+              defaultValue={search} 
               placeholder="নাম, SKU, বা বারকোড দিয়ে খুঁজুন..." 
               className="bg-slate-50"
             />
             <Button type="submit" variant="secondary">খুঁজুন</Button>
-            {resolvedSearchParams.search || resolvedSearchParams.lowStock ? (
+            {search || isLowStockOnly ? (
               <Link href="/inventory">
                 <Button variant="ghost">ক্লিয়ার</Button>
               </Link>
@@ -94,63 +100,7 @@ export default async function InventoryDashboardPage({
           </form>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-sm">
-                <th className="py-3 px-4 font-medium">প্রোডাক্টের নাম</th>
-                <th className="py-3 px-4 font-medium">SKU / বারকোড</th>
-                <th className="py-3 px-4 font-medium text-right">স্টক</th>
-                <th className="py-3 px-4 font-medium text-right">বিক্রয় মূল্য</th>
-                <th className="py-3 px-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {products.map(p => {
-                const stock = Number(p.current_stock)
-                const min = Number(p.min_stock)
-                const isLow = stock <= min
-
-                return (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-900">{p.name}</div>
-                      <div className="text-xs text-slate-500">{p.category?.name || 'Category-less'}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm text-slate-600">{p.sku || '-'}</div>
-                      <div className="text-xs text-slate-400">{p.barcode}</div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className={`text-base font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}`}>
-                        {stock} {p.unit}
-                      </div>
-                      {isLow && <span className="text-[10px] uppercase font-bold text-rose-500 bg-rose-100 px-1.5 py-0.5 rounded">Low</span>}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="font-medium text-slate-900">{formatCurrency(p.price)}</div>
-                      <div className="text-xs text-slate-500">কেনা: {formatCurrency(p.cost)}</div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <Link href={`/inventory/products/${p.id}`}>
-                        <Button variant="ghost" size="icon" className="hover:bg-slate-200 text-slate-400 hover:text-slate-700">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">
-                    কোনো প্রোডাক্ট পাওয়া যায়নি।
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ProductList initialProducts={products} search={search} lowStockOnly={isLowStockOnly} />
       </div>
     </div>
   )

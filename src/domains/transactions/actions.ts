@@ -1,13 +1,14 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { idempotentAction, authAction, hasPermission } from '@/lib/actions/safe-action'
+import { idempotentAction, authAction } from '@/lib/actions/safe-action'
+import { canCreateSales, canCreateExpenses, canDeleteSales, canDeleteExpenses } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
 import { canUseFeature } from '@/domains/saas/entitlements'
 
 export const createTransaction = idempotentAction(async (data: {
-  type: 'sale' | 'expense' | 'payment_in' | 'payment_out',
+  type: 'sale' | 'expense' | 'payment_in' | 'payment_out' | 'purchase' | 'income',
   amount: number,
   account_id?: string,
   category?: string,
@@ -25,12 +26,14 @@ export const createTransaction = idempotentAction(async (data: {
     return { success: false, error: 'Amount must be greater than zero.' }
   }
 
-  // Permission Check
-  if (['sale', 'payment_in'].includes(data.type) && !hasPermission(ctx.role, 'sales.create')) {
-    return { success: false, error: 'Permission Denied: Requires sales.create' }
-  }
-  if (['expense', 'payment_out'].includes(data.type) && !hasPermission(ctx.role, 'expenses.create')) {
-    return { success: false, error: 'Permission Denied: Requires expenses.create' }
+  if (['sale', 'payment_in', 'income'].includes(data.type)) {
+    if (!canCreateSales(ctx.role)) {
+      return { success: false, error: 'Unauthorized to create sales/income' }
+    }
+  } else if (['expense', 'payment_out', 'purchase'].includes(data.type)) {
+    if (!canCreateExpenses(ctx.role)) {
+      return { success: false, error: 'Unauthorized to create expenses/purchases' }
+    }
   }
 
   const supabase = await createClient()
@@ -101,11 +104,39 @@ export const createTransaction = idempotentAction(async (data: {
 
   revalidatePath('/dashboard')
   revalidatePath('/transactions')
+  revalidatePath('/app/reports') // OBS-02: keep reports in sync
   if (data.party_id) {
     revalidatePath(`/parties/${data.party_id}`)
   }
 
   return { success: true, data: { id: transactionId } }
+})
+
+export const voidTransaction = idempotentAction(async (data: {
+  transaction_id: string,
+  reason: string
+}, ctx) => {
+  if (!canDeleteSales(ctx.role) && !canDeleteExpenses(ctx.role)) {
+    return { success: false, error: 'Permission Denied: Requires delete permissions.' }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('void_transaction', {
+    p_transaction_id: data.transaction_id,
+    p_reason: data.reason
+  })
+
+  if (error) {
+    console.error('Failed to void transaction:', error)
+    return { success: false, error: 'Failed to void transaction: ' + error.message }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/transactions')
+  revalidatePath('/inventory')
+
+  return { success: true, data: null }
 })
 
 export const getAccounts = authAction(async (data: void, ctx) => {
@@ -175,7 +206,7 @@ export const createTransfer = idempotentAction(async (data: {
   }
 
   // Permission Check
-  if (!hasPermission(ctx.role, 'expenses.create')) {
+  if (!canCreateExpenses(ctx.role)) {
     // Assuming transfer needs similar privileges to expenses or sales
     return { success: false, error: 'Permission Denied: Requires management privileges' }
   }

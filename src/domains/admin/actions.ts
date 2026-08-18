@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { logPlatformAction } from '@/lib/security/audit'
 import { adminAction } from '@/lib/actions/safe-action'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createPlatformNotification } from './notifications'
 
 export const getPlatformMetrics = adminAction(async (_params: void) => {
   const supabase = await createClient()
@@ -138,7 +139,17 @@ export const updateBusinessPlanAction = adminAction(async (params: { businessId:
     target_id: params.businessId,
     new_state: { plan_id: params.planId, reason: params.reason }
   })
-  
+
+  // MF-09: Notify admins of plan change
+  await createPlatformNotification(
+    'plan_changed',
+    'normal',
+    'Plan Changed by Admin',
+    `Plan for business ${params.businessId} was manually updated. Reason: ${params.reason}`,
+    `/admin/businesses/${params.businessId}`,
+    { business_id: params.businessId, plan_id: params.planId }
+  )
+
   revalidatePath('/admin/businesses')
   revalidatePath(`/admin/businesses/${params.businessId}`)
   return { success: true, data: null }
@@ -278,12 +289,68 @@ export const forceLogoutUserAction = adminAction(async (params: { userId: string
 
 export const getPlans = adminAction(async (_params: void) => {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('plans').select('*').order('price_monthly', { ascending: true })
+  const { data, error } = await supabase.from('plans').select('*, plan_features(*)').order('price_monthly', { ascending: true })
   if (error) {
     console.error('Error fetching plans:', error)
     return { success: false, error: error.message }
   }
   return { success: true, data }
+})
+
+export const updatePlanAction = adminAction(async (params: {
+  planId: string
+  name?: string
+  description?: string
+  priceMonthly?: number
+  isActive?: boolean
+}, ctx) => {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('update_plan_pricing', {
+    p_plan_id: params.planId,
+    p_name: params.name ?? null,
+    p_description: params.description ?? null,
+    p_price_monthly: params.priceMonthly ?? null,
+    p_is_active: params.isActive ?? null,
+  })
+
+  if (error) return { success: false, error: error.message }
+
+  await logPlatformAction({
+    action: 'update_plan',
+    target_type: 'plan',
+    target_id: params.planId,
+    new_state: params
+  })
+
+  revalidatePath('/admin/billing')
+  return { success: true, data: null }
+})
+
+export const updatePlanFeatureAction = adminAction(async (params: {
+  planId: string
+  featureKey: string
+  limitValue: number | null
+  hardLimit?: number | null
+}, ctx) => {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('upsert_plan_feature', {
+    p_plan_id: params.planId,
+    p_feature_key: params.featureKey,
+    p_limit_value: params.limitValue,
+    p_hard_limit: params.hardLimit ?? null,
+  })
+
+  if (error) return { success: false, error: error.message }
+
+  await logPlatformAction({
+    action: 'update_plan_feature',
+    target_type: 'plan',
+    target_id: params.planId,
+    new_state: params
+  })
+
+  revalidatePath('/admin/billing')
+  return { success: true, data: null }
 })
 
 export const testSmsGateway = adminAction(async (params: { phone: string }) => {

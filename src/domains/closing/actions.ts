@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { authAction, requirePermission } from '@/lib/actions/safe-action'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
 
@@ -9,7 +10,7 @@ type ClosingStatus =
   | { status: 'closed'; closing: { id: string; expected_cash: number; actual_cash: number; difference: number; reason: string | null; closed_at: string; summary: any } }
   | { status: 'open'; summary: any }
 
-export const getDailyClosingSummary = requirePermission('closing.manage', authAction(async (data: { date: string }, ctx): Promise<import('@/types/api').ActionResponse<ClosingStatus>> => {
+export const getDailyClosingSummary = requirePermission(PERMISSIONS.CLOSING_MANAGE, authAction(async (data: { date: string }, ctx): Promise<import('@/types/api').ActionResponse<ClosingStatus>> => {
   const supabase = await createClient()
 
   // 1. Check if already closed
@@ -37,7 +38,7 @@ export const getDailyClosingSummary = requirePermission('closing.manage', authAc
   return { success: true, data: { status: 'open', summary } }
 }))
 
-export const closeDay = requirePermission('closing.manage', authAction(async (data: {
+export const closeDay = requirePermission(PERMISSIONS.CLOSING_MANAGE, authAction(async (data: {
   date: string
   actual_cash: number
   reason?: string

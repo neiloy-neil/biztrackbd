@@ -15,6 +15,7 @@ type PlanListProps = {
   scheduledPlanName?: string
   cancelAtPeriodEnd?: boolean
   periodEnd?: string
+  currentCycle?: 'monthly' | 'annual'
 }
 
 export default function PlanList({ 
@@ -24,10 +25,12 @@ export default function PlanList({
   scheduledPlanId, 
   scheduledPlanName, 
   cancelAtPeriodEnd, 
-  periodEnd 
+  periodEnd,
+  currentCycle = 'monthly'
 }: PlanListProps) {
   const router = useRouter()
   const [promoCode, setPromoCode] = useState('')
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(currentCycle)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [isCanceling, setIsCanceling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +40,7 @@ export default function PlanList({
     setError(null)
     const formData = new FormData()
     formData.append('plan_id', planId)
+    formData.append('billing_cycle', billingCycle)
     if (promoCode) {
       formData.append('promo_code', promoCode)
     }
@@ -116,13 +120,35 @@ export default function PlanList({
         </div>
       </div>
 
+      <div className="flex justify-center mb-8">
+        <div className="bg-slate-100 p-1 rounded-lg inline-flex items-center">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              billingCycle === 'monthly' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Monthly Billing
+          </button>
+          <button
+            onClick={() => setBillingCycle('annual')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              billingCycle === 'annual' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Annual Billing (Save ~20%)
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {plans.map((plan) => {
-          const isActive = plan.id === activePlanId
+          const isActive = plan.id === activePlanId && billingCycle === currentCycle
           const isScheduled = plan.id === scheduledPlanId
           const isLoading = loadingId === plan.id
           
-          const isUpgrade = plan.price_monthly > activePlanPrice
+          const planPrice = billingCycle === 'annual' ? plan.price_annual : plan.price_monthly
+          const isUpgrade = planPrice > activePlanPrice
           const buttonText = isActive ? 'সক্রিয় (Active)' : isScheduled ? 'Scheduled (পরবর্তী চক্র)' : isUpgrade ? 'আপগ্রেড (Upgrade)' : 'ডাউনগ্রেড (Downgrade)'
 
           return (
@@ -142,8 +168,8 @@ export default function PlanList({
                 <p className="text-sm text-slate-500 min-h-[40px] mb-4">{plan.description}</p>
                 
                 <div className="flex items-baseline text-3xl font-extrabold text-slate-900 mb-6">
-                  ৳{plan.price_monthly}
-                  <span className="ml-1 text-sm font-medium text-slate-500">/মাস (mo)</span>
+                  ৳{planPrice}
+                  <span className="ml-1 text-sm font-medium text-slate-500">/{billingCycle === 'annual' ? 'বছর (yr)' : 'মাস (mo)'}</span>
                 </div>
                 
                 <div className="mt-auto pt-4 border-t border-slate-100">

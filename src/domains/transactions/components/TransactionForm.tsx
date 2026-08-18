@@ -25,7 +25,7 @@ export function TransactionForm({ accounts, parties, recentCategories }: { accou
   const searchParams = useSearchParams()
   const defaultType = searchParams.get('type') === 'expense' ? 'expense' : 'sale'
 
-  const [type, setType] = useState<'sale' | 'expense'>(defaultType)
+  const [type, setType] = useState<'sale' | 'expense' | 'income' | 'purchase'>(defaultType as any)
   const [amount, setAmount] = useState('')
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('')
   const [categoryId, setCategoryId] = useState('')
@@ -58,12 +58,12 @@ export function TransactionForm({ accounts, parties, recentCategories }: { accou
 
   const isDue = paymentMode === 'due'
   const suggestedCategories = Array.from(new Set([
-    ...(type === 'sale' ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES),
+    ...(['sale', 'income'].includes(type) ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES),
     ...recentCategories,
   ]))
 
   const filteredParties = parties.filter(p =>
-    p.type === (type === 'sale' ? 'customer' : 'supplier') || p.type === 'both'
+    p.type === (['sale', 'income'].includes(type) ? 'customer' : 'supplier') || p.type === 'both'
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,12 +160,18 @@ export function TransactionForm({ accounts, parties, recentCategories }: { accou
         setNewPartyName('')
         amountInputRef.current?.focus()
       }}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="sale" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            আয় (Income)
+        <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          <TabsTrigger value="sale" className="text-xs py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            বিক্রি<br/>(Sale)
           </TabsTrigger>
-          <TabsTrigger value="expense" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
-            খরচ (Expense)
+          <TabsTrigger value="income" className="text-xs py-2 data-[state=active]:bg-teal-500 data-[state=active]:text-white">
+            অন্যান্য<br/>আয়
+          </TabsTrigger>
+          <TabsTrigger value="purchase" className="text-xs py-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white">
+            পণ্য<br/>ক্রয়
+          </TabsTrigger>
+          <TabsTrigger value="expense" className="text-xs py-2 data-[state=active]:bg-red-500 data-[state=active]:text-white">
+            খরচ<br/>(Expense)
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -202,7 +208,7 @@ export function TransactionForm({ accounts, parties, recentCategories }: { accou
                   onClick={() => setPaymentMode(acc.id)}
                   className={`flex-1 min-w-[80px] ${
                     paymentMode === acc.id
-                      ? type === 'sale'
+                      ? ['sale', 'income'].includes(type)
                         ? 'bg-emerald-600 hover:bg-emerald-700'
                         : 'bg-red-600 hover:bg-red-700'
                       : ''
@@ -211,8 +217,8 @@ export function TransactionForm({ accounts, parties, recentCategories }: { accou
                   {acc.name}
                 </Button>
               ))}
-              {/* Due option — only for sales (credit to customer) */}
-              {type === 'sale' && (
+              {/* Due option — only for sales and purchases (credit to customer/supplier) */}
+              {['sale', 'purchase'].includes(type) && (
                 <Button
                   type="button"
                   variant={isDue ? 'default' : 'outline'}

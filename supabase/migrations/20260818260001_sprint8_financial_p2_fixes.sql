@@ -69,15 +69,15 @@ DECLARE
   v_suppliers jsonb;
 BEGIN
   -- We query the v_party_balances view created in the P0 fixes
-  SELECT COALESCE(jsonb_agg(jsonb_build_object('id', party_id, 'name', party_name, 'phone', party_phone, 'balance', ABS(balance))), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('id', id, 'name', name, 'phone', phone, 'balance', ABS(current_due))), '[]'::jsonb)
   INTO v_customers
   FROM public.v_party_balances
-  WHERE business_id = p_business_id AND party_type IN ('customer', 'both') AND balance > 0;
+  WHERE business_id = p_business_id AND type IN ('customer', 'both') AND current_due > 0;
 
-  SELECT COALESCE(jsonb_agg(jsonb_build_object('id', party_id, 'name', party_name, 'phone', party_phone, 'balance', ABS(balance))), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('id', id, 'name', name, 'phone', phone, 'balance', ABS(current_due))), '[]'::jsonb)
   INTO v_suppliers
   FROM public.v_party_balances
-  WHERE business_id = p_business_id AND party_type IN ('supplier', 'both') AND balance < 0;
+  WHERE business_id = p_business_id AND type IN ('supplier', 'both') AND current_due < 0;
 
   RETURN QUERY SELECT v_customers, v_suppliers;
 END;

@@ -3,7 +3,7 @@ import { getLowStockProducts } from '../actions'
 import { AlertTriangle } from 'lucide-react'
 
 export async function LowStockProducts() {
-  const res = await getLowStockProducts({ threshold: 10, limit: 5 })
+  const res = await getLowStockProducts({ limit: 20 })
 
   if (!res?.success || !res.data) {
     return null
@@ -27,7 +27,7 @@ export async function LowStockProducts() {
             <div key={p.id} className="flex items-center justify-between p-4">
               <span className="text-sm font-semibold text-slate-800">{p.name}</span>
               <span className="text-sm font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">
-                {p.currentStock} পিস
+                {p.currentStock} / {p.minStock} পিস
               </span>
             </div>
           ))}

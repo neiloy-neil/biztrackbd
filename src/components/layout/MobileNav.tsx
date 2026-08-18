@@ -56,9 +56,9 @@ export function MobileNav() {
                   <ArrowUpCircle className="h-8 w-8 text-emerald-600" />
                   <span className="text-lg">POS বিক্রি</span>
                 </Link>
-                <Link onClick={() => setOpen(false)} href="/app/transactions/new?type=sale" className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold active:scale-[0.98]">
+                <Link onClick={() => setOpen(false)} href="/app/transactions/new?type=income" className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold active:scale-[0.98]">
                   <ArrowUpCircle className="h-8 w-8 text-teal-600" />
-                  <span className="text-lg">সাধারণ আয়</span>
+                  <span className="text-lg">অন্যান্য আয়</span>
                 </Link>
                 <Link onClick={() => setOpen(false)} href="/app/transactions/new?type=expense" className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold active:scale-[0.98]">
                   <ArrowDownCircle className="h-8 w-8 text-rose-600" />
@@ -71,6 +71,10 @@ export function MobileNav() {
                 <Link onClick={() => setOpen(false)} href="/app/parties?tab=suppliers" className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold active:scale-[0.98]">
                   <Users className="h-8 w-8 text-orange-600" />
                   <span className="text-lg">দেনা পরিশোধ</span>
+                </Link>
+                <Link onClick={() => setOpen(false)} href="/app/transactions/new?type=purchase" className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold active:scale-[0.98]">
+                  <Package className="h-8 w-8 text-orange-600" />
+                  <span className="text-lg">পণ্য ক্রয়</span>
                 </Link>
                 <button onClick={() => { setOpen(false); setTransferOpen(true) }} className="inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm transition-all outline-none select-none h-24 flex-col gap-2 border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold active:scale-[0.98] w-full">
                   <ArrowLeftRight className="h-8 w-8 text-purple-600" />

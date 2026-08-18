@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { ROLE_PERMISSIONS, hasPermission } from '@/lib/actions/safe-action'
+import { ROLE_PERMISSIONS } from '@/lib/auth/rbac'
 
 export async function getClientPermissions() {
   const { cookies } = await import('next/headers')

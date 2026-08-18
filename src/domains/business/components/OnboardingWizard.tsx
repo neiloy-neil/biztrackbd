@@ -58,7 +58,7 @@ export function OnboardingWizard() {
     })
 
     if (res.success) {
-      router.push('/dashboard')
+      router.push(res.redirectUrl || '/app/dashboard')
       router.refresh()
     } else {
       setError(res.error || 'Failed to complete setup.')

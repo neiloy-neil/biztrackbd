@@ -31,7 +31,7 @@ export default async function AdminLayout({
 
   const { count: unreadCount } = await supabase
     .from('platform_notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('*', { count: 'estimated', head: true }) // PERF-02: estimated avoids full table scan
     .eq('is_read', false)
 
   return (

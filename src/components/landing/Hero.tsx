@@ -18,7 +18,7 @@ export function Hero() {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              আপনার ব্যবসার হিসাব,<br className="hidden md:block" /> এখন <span className="text-indigo-600">আপনার হাতের মুঠোয়।</span>
+              দোকানের সমস্ত হিসাব,<br className="hidden md:block" /> এখন <span className="text-emerald-600">১০০% আপনার কন্ট্রোলে।</span>
             </h1>
           </motion.div>
 
@@ -28,7 +28,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto"
           >
-            বেচাকেনা, খরচ, পাওনা-দেনা এবং লাভের হিসাব রাখুন খুব সহজেই। কোনো একাউন্টিং জ্ঞানের প্রয়োজন নেই। "আপনার ব্যবসার হিসাব এখন ১০ সেকেন্ডে।"
+            বাকি, নগদ, স্টক আর খরচের হিসাব নিয়ে আর কোনো দুশ্চিন্তা নয়। খাতা-কলমের ঝামেলা ছেড়ে দিন, আর রাতে নিশ্চিন্তে ঘুমান।
           </motion.p>
 
           <motion.div 
@@ -39,14 +39,14 @@ export function Hero() {
           >
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
               <Link href="/app/onboarding" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg px-8 h-14 rounded-full font-bold shadow-lg shadow-indigo-600/20">
-                  ফ্রি শুরু করুন
+                <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg px-8 h-14 rounded-full font-bold shadow-lg shadow-emerald-600/20">
+                  ফ্রি শুরু করুন (Start Free)
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
               <Link href="#how-it-works" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="w-full text-lg px-8 h-14 rounded-full gap-2 bg-white">
-                  <PlayCircle className="w-5 h-5 text-indigo-600" />
+                  <PlayCircle className="w-5 h-5 text-emerald-600" />
                   কীভাবে কাজ করে
                 </Button>
               </Link>
@@ -66,11 +66,11 @@ export function Hero() {
           <div className="relative rounded-xl md:rounded-2xl border border-slate-200/50 bg-white/50 backdrop-blur-xl p-2 md:p-4 shadow-2xl overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-t from-slate-100/50 to-transparent pointer-events-none" />
             <div className="aspect-[16/9] bg-slate-100 rounded-lg md:rounded-xl border border-slate-200 shadow-sm overflow-hidden relative flex items-center justify-center">
-              {/* Placeholder for actual product screenshot */}
-              <div className="text-slate-400 font-mono text-sm flex flex-col items-center">
-                <div className="w-16 h-16 mb-4 rounded-full bg-slate-200 animate-pulse" />
-                [ Product Dashboard Screenshot Placeholder ]
-              </div>
+              <img 
+                src="/app_mockup.jpg" 
+                alt="BizTrack BD Mobile Dashboard UI" 
+                className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-500" 
+              />
             </div>
           </div>
         </motion.div>

@@ -100,29 +100,48 @@ export async function updateSession(request: NextRequest) {
       const isSuspendedPath = pathname === '/app/suspended' || pathname === '/suspended'
       const isOnboardingPath = pathname === '/app/onboarding' || pathname === '/onboarding'
 
+      // MF-25: Check individual user suspension (banned_until in auth.users)
+      // Supabase encodes this in the JWT as app_metadata.banned or we check user.user_metadata
+      // The reliable check is user.app_metadata?.provider: banned_until is in auth.users,
+      // but NOT exposed in the Supabase client session by default.
+      // We rely on the DB function is_user_active() called server-side on sensitive actions,
+      // and use the user object's banned_until when available in the session JWT.
+      const bannedUntil = (user as any).banned_until
+      if (!isSuspendedPath && bannedUntil && new Date(bannedUntil) > new Date()) {
+        const response = NextResponse.redirect(
+          new URL(url.hostname.startsWith('app.') ? '/suspended' : '/app/suspended', request.url)
+        )
+        response.cookies.delete('active_business_id')
+        return response
+      }
+
       const activeBusiness = request.cookies.get('active_business_id')
 
-      if (!activeBusiness && !isOnboardingPath && !isSuspendedPath) {
-        // No active business cookie — look up membership
-        const { data: member } = await supabase
-          .from('business_members')
-          .select('business_id, businesses!inner(status)')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single()
+      const isSelectBusinessPath = pathname === '/app/select-business' || pathname === '/select-business'
 
-        if (!member) {
+      if (!activeBusiness && !isOnboardingPath && !isSuspendedPath && !isSelectBusinessPath) {
+        // No active business cookie — look up membership
+        const { data: members } = await supabase
+          .from('business_members')
+          .select('business_id, businesses!inner(status, name)')
+          .eq('user_id', user.id)
+
+        if (!members || members.length === 0) {
           url.pathname = url.hostname.startsWith('app.') ? '/onboarding' : '/app/onboarding'
           return NextResponse.redirect(url)
         }
 
-        const bizStatus = (member.businesses as any)?.status
-        if (bizStatus !== 'active') {
-          url.pathname = url.hostname.startsWith('app.') ? '/suspended' : '/app/suspended'
+        if (members.length === 1) {
+          const bizStatus = (members[0].businesses as any)?.status
+          if (bizStatus !== 'active') {
+            url.pathname = url.hostname.startsWith('app.') ? '/suspended' : '/app/suspended'
+            return NextResponse.redirect(url)
+          }
+          supabaseResponse.cookies.set('active_business_id', members[0].business_id)
+        } else {
+          url.pathname = url.hostname.startsWith('app.') ? '/select-business' : '/app/select-business'
           return NextResponse.redirect(url)
         }
-
-        supabaseResponse.cookies.set('active_business_id', member.business_id)
       } else if (activeBusiness && !isSuspendedPath) {
         // Cookie present — verify business is still active on every request
         const { data: biz } = await supabase

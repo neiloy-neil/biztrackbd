@@ -15,7 +15,7 @@ export const getBusinessProfile = authAction(async (data: void, ctx) => {
     .from('businesses')
     .select('id, name, phone, address, district, business_type, trade_license, logo_url, currency, timezone')
     .eq('id', ctx.businessId)
-    .single()
+    .maybeSingle()
   if (error) return { success: false, error: error.message }
   return { success: true, data: biz }
 })
@@ -47,9 +47,9 @@ export const updateBusinessProfile = authAction(async (
     })
     .eq('id', ctx.businessId)
     .select('id')
-    .single()
+    .maybeSingle()
   if (error) return { success: false, error: error.message }
-  if (!updated) return { success: false, error: 'আপডেট হয়নি। আপনার অনুমতি নেই অথবা business ID মিলছে না।' }
+  if (!updated) return { success: false, error: 'আপডেট হয়নি। আপনার অনুমতি নেই (শুধু Owner আপডেট করতে পারবেন) অথবা business ID মিলছে না।' }
   revalidatePath('/app/settings')
   revalidatePath('/app/settings/business')
   return { success: true, data: null }
@@ -209,4 +209,83 @@ export const removeStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authActio
 
   revalidatePath('/settings/staff')
   return { success: true, data: result }
+}))
+
+// ── Branches ──────────────────────────────────────────────────────────────────
+
+export const getBranches = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  const { data: branches, error } = await supabase
+    .from('branches')
+    .select('*')
+    .eq('business_id', ctx.businessId)
+    .order('created_at', { ascending: true })
+
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: branches }
+})
+
+export const createBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authAction(async (data: {
+  name: string
+  address?: string
+  phone?: string
+}, ctx) => {
+  const supabase = await createClient()
+  const { data: branch, error } = await supabase
+    .from('branches')
+    .insert({
+      business_id: ctx.businessId,
+      name: data.name.trim(),
+      address: data.address?.trim() || null,
+      phone: data.phone?.trim() || null,
+    })
+    .select()
+    .maybeSingle()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  return { success: true, data: branch }
+}))
+
+export const updateBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authAction(async (data: {
+  id: string
+  name: string
+  address?: string
+  phone?: string
+}, ctx) => {
+  const supabase = await createClient()
+  const { data: branch, error } = await supabase
+    .from('branches')
+    .update({
+      name: data.name.trim(),
+      address: data.address?.trim() || null,
+      phone: data.phone?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+    .select()
+    .maybeSingle()
+
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/app/settings')
+  return { success: true, data: branch }
+}))
+
+export const deleteBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authAction(async (data: { id: string }, ctx) => {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('branches')
+    .delete()
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+
+  if (error) {
+    if (error.message.includes('foreign key constraint') || error.code === '23503') {
+      return { success: false, error: 'Cannot delete branch because it has associated transactions or data.' }
+    }
+    return { success: false, error: error.message }
+  }
+  revalidatePath('/app/settings')
+  return { success: true, data: null }
 }))

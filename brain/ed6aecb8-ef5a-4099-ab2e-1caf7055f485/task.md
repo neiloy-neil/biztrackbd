@@ -1,0 +1,9 @@
+- [/] Fix P0 & P1 Financial Bugs
+  - [ ] Create `20260818010000_financial_p0_p1_fixes.sql` migration
+  - [ ] Implement new `v_party_balances` logic
+  - [ ] Implement `create_transfer_atomic` RPC
+  - [ ] Implement COGS & Income inclusion in `get_daily_closing_summary`
+  - [ ] Add `createTransfer` action to `actions.ts`
+  - [ ] Run typescript checks & linter
+  - [ ] Write integration test script matching scenario
+  - [ ] Run the test and verify results

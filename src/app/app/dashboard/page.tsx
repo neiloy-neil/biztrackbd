@@ -2,11 +2,13 @@ import { Suspense } from 'react'
 import { DateRangeFilter } from '@/domains/dashboard/components/DateRangeFilter'
 import { QuickActions } from '@/domains/dashboard/components/QuickActions'
 import { DashboardMetrics, DashboardMetricsSkeleton } from '@/domains/dashboard/components/DashboardMetrics'
+import { DashboardHealthScore } from '@/domains/dashboard/components/DashboardHealthScore'
 import { DashboardTrend } from '@/domains/dashboard/components/DashboardTrend'
 import { RecentTransactions } from '@/domains/dashboard/components/RecentTransactions'
 import { LowStockProducts } from '@/domains/dashboard/components/LowStockProducts'
 import { MoneyVisibility, MoneyVisibilitySkeleton } from '@/domains/dashboard/components/MoneyVisibility'
 import { DashboardEmptyState } from './empty-state'
+import { BillingAlert } from '@/domains/billing/components/BillingAlert'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 
@@ -51,12 +53,15 @@ export default async function DashboardPage({
 
   if (businessId) {
     const supabase = await createClient()
-    const { count } = await supabase
+    // PERF-02: Use limit(1) existence check instead of COUNT(*) full table scan
+    const { data: existingTxn } = await supabase
       .from('transactions')
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .eq('business_id', businessId)
-    
-    if (count === 0) {
+      .limit(1)
+      .single()
+
+    if (!existingTxn) {
       isNewBusiness = true
     }
   }
@@ -68,12 +73,22 @@ export default async function DashboardPage({
         <DateRangeFilter />
       </div>
 
+      {businessId && (
+        <Suspense fallback={null}>
+          <BillingAlert businessId={businessId} />
+        </Suspense>
+      )}
+
       {isNewBusiness && <DashboardEmptyState />}
       
       <QuickActions />
 
       <Suspense fallback={<DashboardMetricsSkeleton />}>
         <DashboardMetrics startDate={startDate} endDate={endDate} />
+      </Suspense>
+
+      <Suspense fallback={<div className="h-[200px] w-full bg-slate-100 animate-pulse rounded-xl"></div>}>
+        <DashboardHealthScore startDate={startDate} endDate={endDate} />
       </Suspense>
 
       <Suspense fallback={<MoneyVisibilitySkeleton />}>

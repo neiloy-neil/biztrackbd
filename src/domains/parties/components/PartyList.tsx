@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Phone, MessageCircle, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { getParties } from '@/domains/parties/actions'
 
 interface Party {
   id: string
@@ -41,6 +42,29 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
     router.replace(`${pathname}?${params.toString()}`)
   }
 
+  const [page, setPage] = useState(1)
+  const [parties, setParties] = useState<Party[]>(initialParties)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(initialParties.length === 50)
+
+  useEffect(() => {
+    setParties(initialParties)
+    setPage(1)
+    setHasMore(initialParties.length === 50)
+  }, [initialParties])
+
+  const loadMore = async () => {
+    setLoading(true)
+    const nextPage = page + 1
+    const res = await getParties({ type: currentType as any, search, page: nextPage, limit: 50 })
+    if (res?.success && res.data) {
+      setParties(prev => [...prev, ...res.data])
+      setPage(nextPage)
+      setHasMore(res.data.length === 50)
+    }
+    setLoading(false)
+  }
+
   const formatCurrency = (amount: number) => {
     const safe = isNaN(amount) ? 0 : Math.abs(amount)
     return '৳' + safe.toLocaleString('en-IN', { maximumFractionDigits: 0 })
@@ -66,12 +90,12 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
       </div>
 
       <div className="space-y-3">
-        {initialParties.length === 0 ? (
+        {parties.length === 0 ? (
           <div className="text-center py-10 text-slate-500">
             কোনো তথ্য পাওয়া যায়নি
           </div>
         ) : (
-          initialParties.map((party: Party) => (
+          parties.map((party: Party) => (
             <Link key={party.id} href={`/parties/${party.id}`}>
               <Card className="hover:border-[#007AFF] transition-colors cursor-pointer mb-3">
                 <CardContent className="p-4 flex items-center justify-between">
@@ -100,6 +124,18 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
           ))
         )}
       </div>
+      
+      {hasMore && (
+        <div className="text-center pt-4">
+          <button 
+            onClick={loadMore} 
+            disabled={loading}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium"
+          >
+            {loading ? 'লোড হচ্ছে...' : 'আরও লোড করুন (Load More)'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

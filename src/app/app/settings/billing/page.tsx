@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getEntitlements } from '@/domains/saas/entitlements'
 import PlanList from './plan-list'
+import { BillingAlert } from '@/domains/billing/components/BillingAlert'
+import { BillingHistory } from './billing-history'
+import { Suspense } from 'react'
 
 export default async function TenantBillingPage() {
   const supabase = await createClient()
@@ -49,12 +52,27 @@ export default async function TenantBillingPage() {
   // 4. Fetch subscription details
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('cancel_at_period_end, scheduled_plan_id, plans!subscriptions_scheduled_plan_id_fkey(name)')
+    .select('status, billing_cycle, cancel_at_period_end, scheduled_plan_id, plans!subscriptions_scheduled_plan_id_fkey(name)')
     .eq('business_id', businessId)
     .single()
 
   const activePlanId = entitlements?.plan?.id
-  const activePlanPrice = plans.find(p => p.id === activePlanId)?.price_monthly || 0
+  const currentPlan = plans.find(p => p.id === activePlanId)
+  
+  const currentCycle = subscription?.billing_cycle || 'monthly'
+  const activePlanPrice = currentPlan 
+    ? (currentCycle === 'annual' ? currentPlan.price_annual : currentPlan.price_monthly) 
+    : 0
+
+  const statusMap: Record<string, { label: string; className: string }> = {
+    active: { label: 'Active', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    trialing: { label: 'Trialing', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+    past_due: { label: 'Past Due', className: 'bg-orange-100 text-orange-800 border-orange-200' },
+    unpaid: { label: 'Unpaid / Suspended', className: 'bg-red-100 text-red-800 border-red-200' },
+    canceled: { label: 'Canceled', className: 'bg-slate-100 text-slate-800 border-slate-200' },
+  }
+  const subStatus = subscription?.status || 'active'
+  const statusDisplay = statusMap[subStatus] || { label: subStatus, className: 'bg-slate-100' }
 
   // Feature labels mapping
   const featureLabels: Record<string, string> = {
@@ -82,20 +100,37 @@ export default async function TenantBillingPage() {
         <h2 className="text-2xl font-bold tracking-tight text-slate-900">সাবস্ক্রিপশন প্ল্যান (Subscription Plan)</h2>
       </div>
 
+      <div className="mb-8">
+        <Suspense fallback={null}>
+          <BillingAlert businessId={businessId} />
+        </Suspense>
+      </div>
+
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
         <h3 className="text-lg font-medium text-slate-800 mb-2">আপনার বর্তমান প্ল্যান (Your Current Plan)</h3>
         {entitlements ? (
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-6 border-b border-slate-100">
               <div>
+                <p className="text-sm text-slate-500 mb-1">Plan</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-indigo-600">{entitlements.plan.name}</span>
-                  <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-200">সক্রিয় (Active)</Badge>
-                  <a href={`/app/settings/billing/invoices`} className="ml-4 text-sm text-indigo-600 hover:underline">View Invoices</a>
+                  <span className="text-xl font-bold text-indigo-600">{entitlements.plan.name}</span>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">
-                  Reset Date: {new Date(entitlements.plan.period_end).toLocaleDateString('bn-BD')}
-                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Status</p>
+                <Badge className={`${statusDisplay.className}`}>{statusDisplay.label}</Badge>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Price & Cycle</p>
+                <span className="font-semibold text-slate-800">৳{activePlanPrice} / {currentCycle === 'annual' ? 'yr' : 'mo'}</span>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Renewal Date</p>
+                <span className="font-semibold text-slate-800">{new Date(entitlements.plan.period_end).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -176,7 +211,12 @@ export default async function TenantBillingPage() {
         scheduledPlanName={Array.isArray(subscription?.plans) ? subscription?.plans[0]?.name : (subscription?.plans as any)?.name}
         cancelAtPeriodEnd={subscription?.cancel_at_period_end}
         periodEnd={entitlements?.plan?.period_end}
+        currentCycle={currentCycle as any}
       />
+
+      <Suspense fallback={<div className="h-64 mt-12 bg-slate-100 animate-pulse rounded-xl border border-slate-200"></div>}>
+        <BillingHistory businessId={businessId} />
+      </Suspense>
     </div>
   )
 }

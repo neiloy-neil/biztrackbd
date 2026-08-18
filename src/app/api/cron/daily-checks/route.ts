@@ -16,7 +16,11 @@ export async function GET(request: Request) {
   )
 
   try {
-    // Find subscriptions expiring in <= 3 days that are still 'active'
+    // 1. Expire overdue subscriptions (FIN-13)
+    const { data: expiredCount, error: expireError } = await supabase.rpc('expire_overdue_subscriptions')
+    if (expireError) console.error('Failed to expire subscriptions:', expireError)
+
+    // 2. Find subscriptions expiring in <= 3 days and send admin notifications
     const threeDaysFromNow = new Date()
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
     
@@ -44,6 +48,17 @@ export async function GET(request: Request) {
         .insert(notifications)
 
       if (notifError) throw notifError
+    }
+
+    // 2. Generate Smart Alerts for all businesses (low stock, dues, etc.)
+    const { data: businesses, error: bizError } = await supabase
+      .from('businesses')
+      .select('id')
+      
+    if (!bizError && businesses) {
+      for (const biz of businesses) {
+        await supabase.rpc('generate_smart_alerts', { p_business_id: biz.id })
+      }
     }
 
     return NextResponse.json({ success: true, processed: expiringSubs?.length || 0 })

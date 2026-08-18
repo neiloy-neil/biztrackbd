@@ -48,17 +48,18 @@ export const getRecentTransactions = authAction(async (
   return { success: true, data: transactions }
 })
 
+// UX-10 Fix: Compare current_stock <= min_stock per product, not a global threshold
 export const getLowStockProducts = authAction(async (
-  data: { threshold: number, limit: number },
+  data: { limit: number },
   ctx
 ) => {
   const supabase = await createClient()
 
   const { data: lowStock, error } = await supabase
     .from('products')
-    .select('id, name, current_stock')
+    .select('id, name, current_stock, min_stock')
     .eq('business_id', ctx.businessId)
-    .lte('current_stock', data.threshold)
+    .is('deleted_at', null)
     .order('current_stock', { ascending: true })
     .limit(data.limit)
 
@@ -66,14 +67,38 @@ export const getLowStockProducts = authAction(async (
     return { success: false, error: error.message }
   }
 
-  // Map to match the expected format
-  const formattedStock = lowStock.map(p => ({
+  // Filter client-side: current_stock <= min_stock
+  const atOrBelowMinStock = lowStock.filter(
+    p => Number(p.current_stock) <= Number(p.min_stock)
+  )
+
+  const formattedStock = atOrBelowMinStock.map(p => ({
     id: p.id,
     name: p.name,
-    currentStock: Number(p.current_stock)
+    currentStock: Number(p.current_stock),
+    minStock: Number(p.min_stock)
   }))
 
   return { success: true, data: formattedStock }
+})
+
+export const getBusinessHealthScore = authAction(async (
+  data: { startDate: string, endDate: string },
+  ctx
+) => {
+  const supabase = await createClient()
+
+  const { data: scoreData, error } = await supabase.rpc('get_business_health_score', {
+    p_business_id: ctx.businessId,
+    p_start_date: data.startDate,
+    p_end_date: data.endDate
+  })
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  return { success: true, data: scoreData }
 })
 
 export const getMoneyVisibility = authAction(async (

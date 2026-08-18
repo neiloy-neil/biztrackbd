@@ -9,6 +9,7 @@ import { format } from '@/lib/utils/date'
 import { PartyActionButtons } from './party-action-drawer'
 import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
 import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
+import { TransactionList } from '@/domains/parties/components/TransactionList'
 
 async function PartyDetails({ id }: { id: string }) {
   const [partyRes, accountsRes, transRes] = await Promise.all([
@@ -112,42 +113,7 @@ async function PartyDetails({ id }: { id: string }) {
       )}
 
       {/* Transactions List */}
-      <div>
-        <h3 className="text-lg font-bold text-slate-900 mb-4">{'লেনদেন বিবরণী'}</h3>
-        <Card>
-          <div className="divide-y">
-            {transactions.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">{'কোনো লেনদেন পাওয়া যায়নি'}</div>
-            ) : (
-              transactions.map((txn: any) => (
-                <div key={txn.id} className="flex flex-col hover:bg-slate-50 transition-colors">
-                  <div className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-slate-900">{txnLabel(txn.type)}</p>
-                      <p className="text-sm text-slate-500">
-                      {format(new Date(txn.transaction_date), 'dd MMM yyyy')}
-                    </p>
-                  </div>
-                  <div className={`font-bold ${
-                    (isCustomer && txn.type === 'payment_in') || (!isCustomer && txn.type === 'purchase') || (!isCustomer && txn.type === 'payment_out')
-                      ? 'text-emerald-600'
-                      : (isCustomer && txn.type === 'sale') || (!isCustomer && txn.type === 'expense')
-                      ? 'text-red-600'
-                      : 'text-slate-900'
-                  }`}>
-                    {formatCurrency(txn.total_amount)}
-                  </div>
-                </div>
-                <div className="px-4 pb-4 flex items-center justify-between bg-slate-50 border-t">
-                  <TransactionAudit transactionId={txn.id} />
-                  <VoidTransactionButton transactionId={txn.id} state={txn.state} />
-                </div>
-              </div>
-            ))
-            )}
-          </div>
-        </Card>
-      </div>
+      <TransactionList initialTransactions={transactions} partyId={party.id} isCustomer={isCustomer} />
     </div>
   )
 }

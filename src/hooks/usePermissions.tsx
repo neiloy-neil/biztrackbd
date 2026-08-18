@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ReactNode } from 'react'
 import { getClientPermissions } from '@/lib/actions/permissions'
+import { Permission } from '@/lib/auth/rbac'
 
 export function usePermissions() {
   const [role, setRole] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export function usePermissions() {
     return () => { mounted = false }
   }, [])
 
-  const can = (permission: string) => {
+  const can = (permission: Permission | string) => {
     if (permissions.includes('*')) return true
     return permissions.includes(permission)
   }
@@ -33,7 +34,7 @@ export function RequirePermission({
   children, 
   fallback = null 
 }: { 
-  permission: string
+  permission: Permission | string
   children: ReactNode
   fallback?: ReactNode 
 }) {

@@ -48,7 +48,48 @@ export async function completeOnboarding(payload: {
     path: '/'
   })
 
-  return { success: true, businessId }
+  // 4. Check for checkout intent
+  const intentCookie = cookieStore.get('checkout_intent')?.value
+  let redirectUrl = '/app/dashboard'
+
+  if (intentCookie) {
+    try {
+      const intent = JSON.parse(intentCookie)
+      if (intent.planId) {
+        // Fetch the plan
+        const { data: plan } = await supabase
+          .from('plans')
+          .select('id, price_monthly, limits')
+          .eq('id', intent.planId)
+          .single()
+          
+        if (plan) {
+          if (plan.price_monthly === 0) {
+            // Activate free subscription directly
+            await supabase.from('business_subscriptions').insert({
+              business_id: businessId,
+              plan_id: plan.id,
+              status: 'active',
+              current_period_start: new Date().toISOString(),
+              current_period_end: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(), // 10 years
+              cancel_at_period_end: false,
+              limits_snapshot: plan.limits
+            })
+            // Clear intent since we used it
+            cookieStore.delete('checkout_intent')
+            redirectUrl = '/app/dashboard'
+          } else {
+            // Send to checkout
+            redirectUrl = `/app/checkout`
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Invalid checkout intent cookie')
+    }
+  }
+
+  return { success: true, businessId, redirectUrl }
 }
 
 export async function setActiveBusiness(businessId: string) {

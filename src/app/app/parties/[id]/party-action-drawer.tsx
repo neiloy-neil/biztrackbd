@@ -50,7 +50,7 @@ function getActions(isCustomer: boolean): [ActionConfig, ActionConfig] {
   }
   return [
     {
-      type: 'expense',
+      type: 'purchase',
       label: 'পণ্য কিনলাম',
       icon: <ArrowDownLeft className="h-5 w-5" />,
       color: 'bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 border border-orange-200',

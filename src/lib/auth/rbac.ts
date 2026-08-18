@@ -26,6 +26,7 @@ export const PERMISSIONS = {
   
   SETTINGS_MANAGE: 'settings.manage',
   CLOSING_MANAGE: 'closing.manage',
+  BILLING_MANAGE: 'billing.manage',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -45,6 +46,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.STAFF_VIEW,      PERMISSIONS.STAFF_MANAGE,
     PERMISSIONS.SETTINGS_MANAGE,
     PERMISSIONS.CLOSING_MANAGE,
+    // Note: BILLING_MANAGE is owner-only — not granted to manager
   ],
   cashier: [
     PERMISSIONS.SALES_CREATE, PERMISSIONS.SALES_VIEW,
@@ -81,3 +83,4 @@ export const canManageInventory = (role: string) => hasPermission(role, PERMISSI
 export const canManageStaff = (role: string) => hasPermission(role, PERMISSIONS.STAFF_MANAGE)
 export const canManageSettings = (role: string) => hasPermission(role, PERMISSIONS.SETTINGS_MANAGE)
 export const canManageClosing = (role: string) => hasPermission(role, PERMISSIONS.CLOSING_MANAGE)
+export const canManageBilling = (role: string) => role === 'owner'

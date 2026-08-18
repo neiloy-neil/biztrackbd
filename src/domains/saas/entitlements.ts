@@ -49,13 +49,11 @@ export async function canUseFeature(businessId: string, featureKey: string): Pro
   // Feature not in plan -> disabled
   if (limit === undefined || limit === 0) return false
   
-  // Unlimited -> enabled
+  // Unlimited (null) -> always enabled
   if (limit === null) return true
 
-  // For boolean features (1 means enabled)
-  if (limit === 1) return true
-
-  // For metered features, check if current usage is below the limit
+  // FIN-15 Fix: For ALL numeric limits (including 1), check actual usage.
+  // A limit of 1 means "only 1 allowed", NOT "feature is boolean-enabled".
   const currentUsage = data.usage[featureKey] || 0
   return currentUsage < limit
 }

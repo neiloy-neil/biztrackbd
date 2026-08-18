@@ -1,10 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { authAction } from '@/lib/actions/safe-action'
+import { authAction, requirePermission } from '@/lib/actions/safe-action'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
-export const createProduct = authAction(async (data: {
+// PERM-03: createProduct requires inventory.manage permission
+export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, authAction(async (data: {
   name: string,
   sku?: string,
   barcode?: string,
@@ -46,14 +48,20 @@ export const createProduct = authAction(async (data: {
 
   revalidatePath('/inventory')
   return { success: true, data: { id: productId } }
-})
+}))
 
 export const getProducts = authAction(async (data: { 
   search?: string, 
-  lowStockOnly?: boolean 
+  lowStockOnly?: boolean,
+  page?: number,
+  limit?: number
 }, ctx) => {
   const supabase = await createClient()
   
+  const page = data.page || 1
+  const limit = data.limit || 50
+  const offset = (page - 1) * limit
+
   let query = supabase
     .from('products')
     .select(`
@@ -64,9 +72,26 @@ export const getProducts = authAction(async (data: {
     .eq('business_id', ctx.businessId)
     .is('deleted_at', null)
     .order('name')
+    .range(offset, offset + limit - 1)
 
   if (data.search) {
     query = query.or(`name.ilike.%${data.search}%,sku.ilike.%${data.search}%,barcode.ilike.%${data.search}%`)
+  }
+
+  // If lowStockOnly is true, we must filter at DB level, otherwise it will be inaccurate
+  // Since we don't have a computed column, we can't easily filter current_stock <= min_stock in PostgREST unless we use an RPC.
+  // We'll leave it as a known limitation for now or use the RPC we can create.
+  // For now, if lowStockOnly is true, we don't paginate to avoid breaking the UI filter.
+  if (data.lowStockOnly) {
+    query = supabase
+      .from('products')
+      .select(`*, category:product_categories(name), supplier:parties(name)`)
+      .eq('business_id', ctx.businessId)
+      .is('deleted_at', null)
+      .order('name')
+    if (data.search) {
+      query = query.or(`name.ilike.%${data.search}%,sku.ilike.%${data.search}%,barcode.ilike.%${data.search}%`)
+    }
   }
 
   const { data: products, error } = await query
@@ -103,7 +128,8 @@ export const getProductHistory = authAction(async (data: { productId: string }, 
   return { success: true, data: history }
 })
 
-export const recordMovement = authAction(async (data: {
+// PERM-01: recordMovement requires inventory.manage permission
+export const recordMovement = requirePermission(PERMISSIONS.INVENTORY_MANAGE, authAction(async (data: {
   product_id: string,
   type: 'in' | 'out' | 'adjustment',
   quantity: number,
@@ -164,4 +190,4 @@ export const recordMovement = authAction(async (data: {
   revalidatePath(`/inventory/products/${data.product_id}`)
 
   return { success: true, data: movement }
-})
+}))

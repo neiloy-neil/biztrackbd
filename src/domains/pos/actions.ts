@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { idempotentAction, hasPermission } from '@/lib/actions/safe-action'
+import { idempotentAction } from '@/lib/actions/safe-action'
+import { canCreateSales } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
 // Only product_id + quantity sent to server; prices come from the DB.
@@ -24,7 +25,7 @@ export const processPOSSale = idempotentAction(async (data: {
   items: POSCartItem[]
   payments: POSPayment[]
 }, ctx) => {
-  if (!hasPermission(ctx.role, 'sales.create')) {
+  if (!canCreateSales(ctx.role)) {
     return { success: false, error: 'Permission Denied: Requires sales.create' }
   }
 
@@ -85,10 +86,10 @@ export const processPOSSale = idempotentAction(async (data: {
     product_id: item.product_id,
     quantity: item.quantity,
     unit_price: priceMap[item.product_id],
-    subtotal: item.quantity * priceMap[item.product_id],
+    total_price: item.quantity * priceMap[item.product_id],
   }))
 
-  const subtotal = enrichedItems.reduce((sum, i) => sum + i.subtotal, 0)
+  const subtotal = enrichedItems.reduce((sum, i) => sum + i.total_price, 0)
   const totalAmount = Math.max(0, subtotal - (data.discount || 0))
 
   const { data: transactionId, error } = await supabase.rpc('process_pos_sale', {

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { getBusinessProfile, updateBusinessProfile } from '@/domains/settings/actions'
+import { createClient } from '@/lib/supabase/client'
 
 const BUSINESS_TYPES = [
   'রিটেইল (Retail)',
@@ -55,6 +56,7 @@ export default function BusinessSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     getBusinessProfile()
@@ -77,6 +79,40 @@ export default function BusinessSettingsPage() {
 
   const set = (key: keyof BusinessData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('লোগোর সাইজ ২ মেগাবাইটের কম হতে হবে')
+      return
+    }
+
+    setUploading(true)
+    const supabase = createClient()
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from('business-logos')
+        .upload(fileName, file, { upsert: true })
+        
+      if (error) throw error
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('business-logos')
+        .getPublicUrl(fileName)
+        
+      setForm(f => ({ ...f, logo_url: publicUrl }))
+      toast.success('লোগো আপলোড হয়েছে')
+    } catch (err: any) {
+      toast.error(err.message || 'লোগো আপলোড ব্যর্থ হয়েছে')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,6 +161,25 @@ export default function BusinessSettingsPage() {
             <div className="space-y-1.5">
               <Label>ব্যবসার নাম <span className="text-rose-500">*</span></Label>
               <Input value={form.name} onChange={set('name')} placeholder="যেমন: রহিম স্টোর" required />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>ব্যবসার লোগো (Business Logo)</Label>
+              <div className="flex items-center gap-4">
+                {form.logo_url && (
+                  <img src={form.logo_url} alt="Logo" className="w-16 h-16 object-contain rounded-lg border bg-slate-50" />
+                )}
+                <div className="flex-1">
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleLogoUpload} 
+                    disabled={uploading}
+                    className="text-sm file:bg-emerald-50 file:text-emerald-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-4 file:font-medium file:cursor-pointer cursor-pointer hover:file:bg-emerald-100"
+                  />
+                  {uploading && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin"/> আপলোড হচ্ছে...</p>}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">

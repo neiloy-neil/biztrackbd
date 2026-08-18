@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,7 @@ import { toast } from 'sonner'
 import { User, Shield, Trash2, Edit2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { RequirePermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/lib/auth/rbac'
 
 type StaffMember = {
   user_id: string
@@ -20,11 +22,13 @@ type StaffMember = {
 }
 
 export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
+  const router = useRouter()
   const [staffList, setStaffList] = useState<StaffMember[]>(initialStaff)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [newPhone, setNewPhone] = useState('+880')
   const [newRole, setNewRole] = useState('staff')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const [editUser, setEditUser] = useState<StaffMember | null>(null)
   const [editRole, setEditRole] = useState('')
@@ -35,11 +39,9 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
     setIsSubmitting(false)
     
     if (res?.success) {
-      toast.success('স্টাফ যোগ করা হয়েছে')
+      toast.success('স্টাফ যোগ করা হয়েছে')
       setIsAddOpen(false)
-      // Optimistic or refresh - since we use server actions, revalidatePath will refresh the page on next load,
-      // but client needs a hard refresh or we just reload.
-      window.location.reload()
+      router.refresh()
     } else {
       toast.error(res?.error || 'ব্যর্থ হয়েছে')
     }
@@ -52,23 +54,29 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
     setIsSubmitting(false)
     
     if (res?.success) {
-      toast.success('রোল আপডেট করা হয়েছে')
+      toast.success('রোল আপডেট করা হয়েছে')
       setEditUser(null)
-      window.location.reload()
+      router.refresh()
     } else {
       toast.error(res?.error || 'ব্যর্থ হয়েছে')
     }
   }
 
   const handleRemove = async (user_id: string) => {
-    if (!confirm('আপনি কি নিশ্চিত যে এই স্টাফকে মুছে ফেলতে চান?')) return
-    
+    // UX-14: Use state-controlled confirmation instead of native confirm()
+    if (confirmDeleteId !== user_id) {
+      setConfirmDeleteId(user_id)
+      toast.info('ডিলিট নিশ্চিত করতে আবার ট্যাপ করুন', { duration: 3000 })
+      setTimeout(() => setConfirmDeleteId(null), 3000)
+      return
+    }
+    setConfirmDeleteId(null)
     const res = await removeStaff({ user_id })
     if (res?.success) {
-      toast.success('স্টাফ মুছে ফেলা হয়েছে')
-      window.location.reload()
+      toast.success('স্টাফ মুছে ফেলা হয়েছে')
+      router.refresh()
     } else {
-      toast.error(res?.error || 'ব্যর্থ হয়েছে')
+      toast.error(res?.error || 'ব্যর্থ হয়েছে')
     }
   }
 
@@ -84,7 +92,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
       <Card className="border-none shadow-sm bg-white">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg">বর্তমান স্টাফ</CardTitle>
-          <RequirePermission permission="staff.manage">
+          <RequirePermission permission={PERMISSIONS.STAFF_MANAGE}>
             <Button size="sm" onClick={() => setIsAddOpen(true)}>নতুন স্টাফ যোগ করুন</Button>
           </RequirePermission>
         </CardHeader>
@@ -105,7 +113,7 @@ export function StaffClient({ initialStaff }: { initialStaff: StaffMember[] }) {
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-xs font-medium text-slate-600">
                     <Shield className="w-3 h-3" /> {roleLabels[staff.role] || staff.role}
                   </div>
-                  <RequirePermission permission="staff.manage">
+                  <RequirePermission permission={PERMISSIONS.STAFF_MANAGE}>
                     {staff.role !== 'owner' && (
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => {

@@ -2,11 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { ActionResponse } from '@/types/api'
 import { auditLog } from '../security/audit'
 import { rateLimit } from '../security/rate-limit'
+import { logger } from '../observability/logger'
+import crypto from 'crypto'
 
 type AuthContext = {
   userId: string
   businessId: string
   role: string
+  requestId: string
 }
 
 /**
@@ -50,7 +53,7 @@ export function authAction<TInput, TOutput>(
       .select('role, businesses!inner(status)')
       .eq('business_id', activeBusinessId)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (memberError || !memberData) {
       await auditLog({
@@ -68,55 +71,30 @@ export function authAction<TInput, TOutput>(
       return { success: false, error: 'Your business account has been suspended. Please contact support.' }
     }
 
+    const requestId = crypto.randomUUID()
+
     // 4. Execute the actual action with the secure context
     try {
       const result = await action(data, {
         userId: user.id,
         businessId: activeBusinessId,
-        role: memberData.role
+        role: memberData.role,
+        requestId
       })
       return result
     } catch (e: any) {
-      console.error('Server Action Error:', e)
-      return { success: false, error: 'Internal Server Error' }
+      logger.error('Unhandled Server Action Error', e, {
+        requestId,
+        userId: user.id,
+        businessId: activeBusinessId,
+        action: action.name || 'anonymous_action'
+      })
+      return { success: false, error: 'Internal Server Error', requestId }
     }
   }
 }
 
-// Mirror of public.has_permission() in the DB (migrations/20260817190000_rbac_canonical.sql).
-// These two must stay in sync — the DB function is the canonical source.
-export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  owner: ['*'],
-  manager: [
-    'sales.create',    'sales.view',      'sales.edit',
-    'expenses.create', 'expenses.view',   'expenses.edit',
-    'customers.view',  'customers.manage',
-    'suppliers.view',  'suppliers.manage',
-    'products.view',   'products.manage',
-    'inventory.manage',
-    'reports.view',
-    'staff.view',      'staff.manage',
-    'settings.manage',
-    'closing.manage',
-  ],
-  cashier: [
-    'sales.create', 'sales.view',
-    'customers.view',
-    'products.view',
-    'closing.manage',
-  ],
-  staff: [
-    'sales.view',
-    'customers.view',
-    'products.view',
-  ],
-}
-
-export function hasPermission(role: string, permission: string): boolean {
-  if (role === 'owner') return true
-  const perms = ROLE_PERMISSIONS[role] || []
-  return perms.includes(permission)
-}
+import { ROLE_PERMISSIONS, hasPermission } from '@/lib/auth/rbac'
 
 /**
  * Enforces idempotency for sensitive operations (like financial transactions).

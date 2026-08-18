@@ -5,14 +5,18 @@ import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
-export const getParties = authAction(async (data: { type?: 'customer' | 'supplier' | 'both', search?: string }, ctx) => {
+export const getParties = authAction(async (data: { type?: 'customer' | 'supplier' | 'both', search?: string, page?: number, limit?: number }, ctx) => {
   const supabase = await createClient()
+
+  const page = data.page || 1
+  const limit = data.limit || 50
+  const offset = (page - 1) * limit
 
   let query = supabase
     .from('v_party_balances')
     .select('*')
     .eq('business_id', ctx.businessId)
-    .is('deleted_at', null)
+    .range(offset, offset + limit - 1)
 
   if (data.type) {
     if (data.type === 'both') {
@@ -46,8 +50,12 @@ export const getParty = authAction(async (data: { id: string }, ctx) => {
   return { success: true, data: party }
 })
 
-export const getPartyTransactions = authAction(async (data: { id: string }, ctx) => {
+export const getPartyTransactions = authAction(async (data: { id: string, page?: number, limit?: number }, ctx) => {
   const supabase = await createClient()
+
+  const page = data.page || 1
+  const limit = data.limit || 50
+  const offset = (page - 1) * limit
 
   const { data: transactions, error } = await supabase
     .from('transactions')
@@ -56,6 +64,7 @@ export const getPartyTransactions = authAction(async (data: { id: string }, ctx)
     .eq('party_id', data.id)
     .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
 
   if (error) return { success: false, error: error.message }
   return { success: true, data: transactions }

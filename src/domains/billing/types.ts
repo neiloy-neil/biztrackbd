@@ -14,6 +14,8 @@ export interface CheckoutResponse {
   success: boolean
   paymentUrl?: string
   transactionId?: string
+  /** The payment gateway's own invoice ID, stored back on our invoice for webhook lookup */
+  gatewayInvoiceId?: string
   error?: string
 }
 

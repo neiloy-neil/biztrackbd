@@ -1,11 +1,23 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
 import { canUseFeature, getLimit } from '@/domains/saas/entitlements'
+
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.startsWith('880')) return digits
+  if (digits.startsWith('0')) return `880${digits.slice(1)}`
+  return `880${digits}`
+}
+
+function deriveEmail(phone: string): string {
+  return `${normalizePhone(phone)}@biztrack.internal`
+}
 
 // ── Business ──────────────────────────────────────────────────────────────────
 
@@ -191,6 +203,65 @@ export const addStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(a
 
   revalidatePath('/settings/staff')
   return { success: true, data: result }
+}))
+
+// 2b. Create Staff Account — owner creates both the auth user and adds them to the business
+export const createStaffAccount = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(async (
+  data: { name: string; phone: string; pin: string; role: string },
+  ctx
+) => {
+  const canAdd = await canUseFeature(ctx.businessId, 'max_users')
+  if (!canAdd) return { success: false, error: 'Maximum staff limit reached for your plan' }
+
+  const cleanPhone = normalizePhone(data.phone.trim())
+  if (!cleanPhone) return { success: false, error: 'ফোন নম্বর দিন' }
+  if (data.pin.length < 4) return { success: false, error: 'পিন কমপক্ষে ৪ সংখ্যার হতে হবে' }
+  if (!data.name.trim()) return { success: false, error: 'নাম দিন' }
+
+  const email = deriveEmail(cleanPhone)
+  const adminClient = await createAdminClient()
+
+  // Create the Supabase auth user
+  const { data: authUser, error: authErr } = await adminClient.auth.admin.createUser({
+    email,
+    password: data.pin,
+    email_confirm: true,
+    user_metadata: { full_name: data.name.trim(), phone: cleanPhone },
+  })
+
+  if (authErr) {
+    if (authErr.message.includes('already registered') || (authErr as { code?: string }).code === 'user_already_exists') {
+      return { success: false, error: 'এই ফোন নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে। পুরনো ফ্লো দিয়ে যোগ করুন।' }
+    }
+    return { success: false, error: authErr.message }
+  }
+
+  const userId = authUser.user.id
+
+  // Upsert profile
+  await adminClient.from('profiles').upsert({
+    id: userId,
+    full_name: data.name.trim(),
+    phone: cleanPhone,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'id' })
+
+  // Add to business
+  const supabase = await createClient()
+  const { data: result, error: staffErr } = await supabase.rpc('add_staff_by_phone', {
+    p_business_id: ctx.businessId,
+    p_phone: cleanPhone,
+    p_role: data.role,
+  })
+
+  if (staffErr || !result?.success) {
+    // Roll back the auth user we just created to avoid orphaned accounts
+    await adminClient.auth.admin.deleteUser(userId)
+    return { success: false, error: staffErr?.message || result?.error || 'স্টাফ যোগ করা যায়নি' }
+  }
+
+  revalidatePath('/app/settings/staff')
+  return { success: true, data: null }
 }))
 
 // 3. Update Staff Role (Requires 'staff.manage' permission)

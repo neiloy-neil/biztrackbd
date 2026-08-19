@@ -35,6 +35,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true, reason: 'missing_internal_invoice_id' })
   }
 
+  
+  // ── 1.5. Payment Failure Alert ──────────────────────────
+  if (status === 'CANCELED' || status === 'FAILED') {
+    if (metadata?.business_id) {
+      await supabaseAdmin.from('notifications').insert({
+        business_id: metadata.business_id,
+        type: 'payment_failed',
+        title: 'Payment Failed',
+        message: `Your recent payment attempt for invoice ${internalInvoiceId} has failed or was cancelled.`,
+        reference_id: internalInvoiceId
+      });
+      // Admin notification
+      await supabaseAdmin.from('platform_notifications').insert({
+        type: 'payment_failed',
+        priority: 'high',
+        title: 'Payment Failed',
+        message: `Business payment failed for invoice ${internalInvoiceId}.`,
+        metadata: { business_id: metadata.business_id, invoice_id: internalInvoiceId }
+      });
+    }
+  }
+
   // ── 2. Process webhook via BillingService ───────────
   try {
     const { BillingService } = await import('@/domains/billing/service')

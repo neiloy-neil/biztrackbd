@@ -19,7 +19,7 @@ export default async function NewTransactionPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 pb-24 bg-[#FAFAFA] min-h-screen">
       <div className="flex items-center gap-4 mb-4">
-        <Link href="/dashboard">
+        <Link href="/app/dashboard">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>

@@ -160,13 +160,30 @@ export const resolveTicket = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, as
 })
 
 export async function getSupportAttachmentUrl(path: string) {
+  // Check admin context first
+  const { createAdminAuthClient } = await import('@/domains/auth/admin-actions')
+  const adminAuthClient = await createAdminAuthClient()
+  const { data: { user: adminUser } } = await adminAuthClient.auth.getUser()
+
+  if (adminUser) {
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const adminSupabase = createAdminClient()
+    const { data, error } = await adminSupabase.storage
+      .from('support-attachments')
+      .createSignedUrl(path, 60)
+    
+    if (error || !data) {
+      console.error('Failed to generate admin signed URL:', error)
+      throw new Error('Failed to generate admin signed URL.')
+    }
+    return data.signedUrl
+  }
+
+  // Not an admin, try business user context
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  // We use the regular authenticated client so that the Storage RLS policy enforces
-  // that the user belongs to the business_id (which is the first folder in the path),
-  // or that they are a platform admin.
   const { data, error } = await supabase.storage
     .from('support-attachments')
     .createSignedUrl(path, 60)
@@ -178,6 +195,22 @@ export async function getSupportAttachmentUrl(path: string) {
 
   return data.signedUrl
 }
+
+export const uploadSupportAttachmentAdmin = adminAction<FormData, string>(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (formData, ctx) => {
+  const file = formData.get('file') as File
+  if (!file) return { success: false, error: 'No file provided' }
+  
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${Math.random()}.${fileExt}`
+  const filePath = `admin/${ctx.userId}/${fileName}`
+
+  const { error: uploadError } = await ctx.adminClient.storage
+    .from('support-attachments')
+    .upload(filePath, file)
+
+  if (uploadError) return { success: false, error: uploadError.message }
+  return { success: true, data: filePath }
+})
 
 export const adminReplyToTicket = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (params: { ticketId: string, message: string, isInternalNote: boolean, attachmentUrl?: string }, ctx: any) => {
   const { ticketId, message, isInternalNote, attachmentUrl } = params

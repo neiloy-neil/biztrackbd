@@ -1,0 +1,152 @@
+
+src\app\admin\(protected)\audit-logs\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\audit-logs\page.tsx:20:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\billing\page.tsx:2:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\billing\page.tsx:7:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\feature-flags\[id]\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\feature-flags\[id]\page.tsx:8:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\feature-flags\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\feature-flags\page.tsx:16:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\invoices\[invoiceId]\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\invoices\[invoiceId]\page.tsx:10:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\invoices\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\invoices\page.tsx:9:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\notifications\preferences\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\notifications\preferences\page.tsx:8:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\notifications\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\notifications\page.tsx:16:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\settings\page.tsx:4:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\settings\page.tsx:10:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\support\[id]\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\support\[id]\page.tsx:12:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\support\page.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\support\page.tsx:15:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\team\AdminTeamClient.tsx:19:import { invitePlatformAdminAction, updatePlatformAdminRoleAction, removePlatformAdminAction } from '@/domains/admin/team.actions'
+src\app\admin\(protected)\team\AdminTeamClient.tsx:38:    const res = await invitePlatformAdminAction({ email: inviteEmail, roleName: inviteRole })
+src\app\admin\(protected)\team\AdminTeamClient.tsx:67:      await removePlatformAdminAction({ userId })
+src\app\admin\(protected)\team\page.tsx:2:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\team\page.tsx:10:  const supabase = await createAdminAuthClient()
+src\app\admin\(protected)\layout.tsx:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\admin\(protected)\layout.tsx:2:import { createAdminClient } from '@/lib/supabase/admin'
+src\app\admin\(protected)\layout.tsx:12:  const authClient = await createAdminAuthClient()
+src\app\admin\(protected)\layout.tsx:21:  const adminClient = await createAdminClient()
+src\app\api\admin\export-audit-logs\route.ts:1:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\app\api\admin\export-audit-logs\route.ts:6:  const supabase = await createAdminAuthClient()
+src\app\api\cron\billing\route.ts:2:import { createAdminClient } from '@/lib/supabase/server'
+src\app\api\cron\billing\route.ts:10:  const supabase = createAdminClient()
+src\app\api\cron\daily-checks\route.ts:15:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\app\api\cron\renewals\route.ts:2:import { createAdminClient } from '@/lib/supabase/server'
+src\app\api\cron\renewals\route.ts:14:    const supabase = createAdminClient()
+src\app\api\cron\smart-alerts\dues\route.ts:2:import { createAdminClient } from '@/lib/supabase/admin'
+src\app\api\cron\smart-alerts\dues\route.ts:13:  const supabase = await createAdminClient()
+src\app\api\cron\smart-alerts\subscriptions\route.ts:2:import { createAdminClient } from '@/lib/supabase/admin'
+src\app\api\cron\smart-alerts\subscriptions\route.ts:13:  const supabase = await createAdminClient()
+src\app\api\webhooks\uddoktapay\route.ts:6:  process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\admin\actions.ts:5:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\actions.ts:9:export const getPlatformMetrics = adminAction(PLATFORM_PERMISSIONS.DASHBOARD_VIEW, async (_params: void, ctx: any) => {
+src\domains\admin\actions.ts:19:export const getPlatformGrowth = adminAction(PLATFORM_PERMISSIONS.DASHBOARD_VIEW, async (_params: void, ctx: any) => {
+src\domains\admin\actions.ts:29:export const fetchBusinessesList = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_VIEW, async (params: { searchQuery?: string, filterStatus?: string, filterPlan?: string }, ctx: any) => {
+src\domains\admin\actions.ts:46:export const fetchBusinessDetail = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_VIEW, async (params: { businessId: string }, ctx: any) => {
+src\domains\admin\actions.ts:63:export const suspendBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:84:export const reactivateBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:105:export const deleteBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:125:export const updateBusinessPlanAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, planId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:157:export const fetchPlatformUsersList = adminAction(PLATFORM_PERMISSIONS.USERS_VIEW, async (params: { searchQuery?: string, filterStatus?: string }, ctx: any) => {
+src\domains\admin\actions.ts:171:export const fetchPlatformUserDetail = adminAction(PLATFORM_PERMISSIONS.USERS_VIEW, async (params: { userId: string }, ctx: any) => {
+src\domains\admin\actions.ts:224:export const suspendUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:245:export const reactivateUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:266:export const forceLogoutUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
+src\domains\admin\actions.ts:286:export const getPlans = adminAction(PLATFORM_PERMISSIONS.PLANS_MANAGE, async (_params: void, ctx: any) => {
+src\domains\admin\actions.ts:296:export const updatePlanAction = adminAction(PLATFORM_PERMISSIONS.PLANS_MANAGE, async (params: {
+src\domains\admin\actions.ts:325:export const updatePlanFeatureAction = adminAction(PLATFORM_PERMISSIONS.PLANS_MANAGE, async (params: {
+src\domains\admin\actions.ts:352:export const testSmsGateway = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { phone: string }, ctx: any) => {
+src\domains\admin\feature-flags.ts:3:import { createClient as createAdminClient } from '@supabase/supabase-js'
+src\domains\admin\feature-flags.ts:6:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\feature-flags.ts:10:// adminAction already verifies platform admin status securely
+src\domains\admin\feature-flags.ts:11:function getAdminSupabase() {
+src\domains\admin\feature-flags.ts:12:  return createAdminClient(
+src\domains\admin\feature-flags.ts:14:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\admin\feature-flags.ts:18:export const createFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { id: string, description: string, isGlobalEnabled: boolean }, ctx: any) => {
+src\domains\admin\feature-flags.ts:40:export const toggleGlobalFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { id: string, isGlobalEnabled: boolean }, ctx: any) => {
+src\domains\admin\feature-flags.ts:61:export const setFlagPlanEntitlement = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { flagId: string, planId: string, enabled: boolean }, ctx: any) => {
+src\domains\admin\feature-flags.ts:83:export const addFlagOverride = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { flagId: string, targetType: 'business' | 'user', targetId: string, isEnabled: boolean }, ctx: any) => {
+src\domains\admin\feature-flags.ts:107:export const removeFlagOverride = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { overrideId: string, flagId: string }, ctx: any) => {
+src\domains\admin\invoice.actions.ts:3:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\invoice.actions.ts:8:export const voidInvoiceAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANAGE, async (params: { invoiceId: string }, ctx: any) => {
+src\domains\admin\invoice.actions.ts:29:export const refundInvoiceAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANAGE, async (params: { invoiceId: string }, ctx: any) => {
+src\domains\admin\invoice.actions.ts:50:export const markInvoicePaidAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANAGE, async (params: { invoiceId: string }, ctx: any) => {
+src\domains\admin\notifications.ts:3:import { createClient as createAdminClient } from '@supabase/supabase-js'
+src\domains\admin\notifications.ts:5:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\notifications.ts:9:// adminAction already verifies platform admin status securely
+src\domains\admin\notifications.ts:10:function getAdminSupabase() {
+src\domains\admin\notifications.ts:11:  return createAdminClient(
+src\domains\admin\notifications.ts:13:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\admin\notifications.ts:26:  const adminSupabase = createAdminClient(
+src\domains\admin\notifications.ts:28:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\admin\notifications.ts:48:export const markNotificationAsRead = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (notificationId: string, ctx: any) => {
+src\domains\admin\notifications.ts:60:export const markAllNotificationsAsRead = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (_params: void, ctx: any) => {
+src\domains\admin\notifications.ts:82:export const deleteNotification = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (notificationId: string, ctx: any) => {
+src\domains\admin\notifications.ts:95:export const updateNotificationPreferences = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { emailNotifications: boolean, mutedTypes: string[] }, ctx: any) => {
+src\domains\admin\promotions.ts:3:import { createClient as createAdminClient } from '@supabase/supabase-js'
+src\domains\admin\promotions.ts:5:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\promotions.ts:9:// adminAction already verifies platform admin status securely
+src\domains\admin\promotions.ts:10:function getAdminSupabase() {
+src\domains\admin\promotions.ts:11:  return createAdminClient(
+src\domains\admin\promotions.ts:13:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\admin\promotions.ts:17:export const getCoupons = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (_params: void, ctx: any) => {
+src\domains\admin\promotions.ts:32:export const createCoupon = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { 
+src\domains\admin\promotions.ts:72:export const toggleCouponActive = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { couponId: string, isActive: boolean }, ctx: any) => {
+src\domains\admin\promotions.ts:87:export const extendTrial = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { businessId: string, days: number }, ctx: any) => {
+src\domains\admin\promotions.ts:103:export const grantPromotionalCredit = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { businessId: string, amount: number, reason: string }, ctx: any) => {
+src\domains\admin\settings.actions.ts:3:import { createAdminClient } from '@/lib/supabase/server'
+src\domains\admin\settings.actions.ts:4:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\settings.actions.ts:9:  const supabase = createAdminClient()
+src\domains\admin\settings.actions.ts:11:  // We can just query them without the adminAction wrapper since it's a read operation
+src\domains\admin\settings.actions.ts:28:export const updatePlatformSetting = adminAction<FormData, any>(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (formData, ctx) => {
+src\domains\admin\settings.actions.ts:84:export const getSystemEnvironmentStatus = adminAction<void, any>(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (_params, ctx) => {
+src\domains\admin\settings.actions.ts:91:      supabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+src\domains\admin\team.actions.ts:3:import { adminAction } from '@/lib/actions/safe-action'
+src\domains\admin\team.actions.ts:8:export const fetchPlatformAdminsAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (_params: any, ctx: any) => {
+src\domains\admin\team.actions.ts:20:export const invitePlatformAdminAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { email: string, roleName: string }, ctx: any) => {
+src\domains\admin\team.actions.ts:67:export const updatePlatformAdminRoleAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { userId: string, roleName: string }, ctx: any) => {
+src\domains\admin\team.actions.ts:88:export const removePlatformAdminAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { userId: string }, ctx: any) => {
+src\domains\auth\actions.ts:5:import { createAdminClient } from '@/lib/supabase/admin'
+src\domains\auth\actions.ts:81:  const adminClient = await createAdminClient()
+src\domains\auth\actions.ts:134:  const adminClient = await createAdminClient()
+src\domains\auth\actions.ts:162:  const adminClient = await createAdminClient()
+src\domains\auth\actions.ts:248:  const adminClient = await createAdminClient()
+src\domains\auth\admin-actions.ts:10:export async function createAdminAuthClient() {
+src\domains\auth\admin-actions.ts:43:  const supabase = await createAdminAuthClient()
+src\domains\auth\admin-actions.ts:72:  const supabase = await createAdminAuthClient()
+src\domains\billing\checkout.ts:1:import { createAdminClient } from '@/lib/supabase/server'
+src\domains\billing\checkout.ts:16:    const supabase = createAdminClient()
+src\domains\billing\service.ts:4:import { createAdminClient } from '@/lib/supabase/server'
+src\domains\billing\service.ts:32:    const supabase = createAdminClient()
+src\domains\billing\service.ts:203:    const supabase = createAdminClient()
+src\domains\billing\service.ts:314:    const supabase = createAdminClient()
+src\domains\billing\service.ts:397:    const supabase = createAdminClient()
+src\domains\support\actions.ts:4:import { createClient as createAdminClient } from '@supabase/supabase-js'
+src\domains\support\actions.ts:105:async function getAdminSupabase() {
+src\domains\support\actions.ts:113:  return createAdminClient(
+src\domains\support\actions.ts:115:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\domains\support\actions.ts:120:  const adminSupabase = await getAdminSupabase()
+src\domains\support\actions.ts:138:  const adminSupabase = await getAdminSupabase()
+src\domains\support\actions.ts:197:  const adminSupabase = await getAdminSupabase()
+src\lib\actions\safe-action.ts:206:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\lib\actions\safe-action.ts:207:import { createAdminClient } from '@/lib/supabase/admin'
+src\lib\actions\safe-action.ts:213: * export const myAdminAction = adminAction(PLATFORM_PERMISSIONS.USERS_VIEW, async (data, ctx) => { ... })
+src\lib\actions\safe-action.ts:215:export function adminAction<TInput, TOutput>(
+src\lib\actions\safe-action.ts:220:    const isRateLimited = await rateLimit('adminAction')
+src\lib\actions\safe-action.ts:225:    const authClient = await createAdminAuthClient()
+src\lib\actions\safe-action.ts:226:    const adminClient = await createAdminClient()
+src\lib\actions\safe-action.ts:266:    // 4. Execute the actual action with the secure context (passing the service_role client)
+src\lib\supabase\admin.ts:5: * Supabase Admin Client — uses the SERVICE_ROLE key.
+src\lib\supabase\admin.ts:10:export async function createAdminClient() {
+src\lib\supabase\admin.ts:12:  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+src\lib\supabase\admin.ts:15:    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars')
+src\lib\supabase\server.ts:33:export function createAdminClient() {
+src\lib\supabase\server.ts:36:    process.env.SUPABASE_SERVICE_ROLE_KEY!
+src\lib\auth-wrappers.ts:2:import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+src\lib\auth-wrappers.ts:17:export function adminAction<P, T>(
+src\lib\auth-wrappers.ts:22:    const adminClient = await createAdminAuthClient()
+

@@ -201,7 +201,7 @@ export const addStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authAction(a
     return { success: false, error: result.error }
   }
 
-  revalidatePath('/settings/staff')
+  revalidatePath('/app/settings/staff')
   return { success: true, data: result }
 }))
 
@@ -293,7 +293,7 @@ export const updateStaffRole = requirePermission(PERMISSIONS.STAFF_MANAGE, authA
     return { success: false, error: result.error }
   }
 
-  revalidatePath('/settings/staff')
+  revalidatePath('/app/settings/staff')
   return { success: true, data: result }
 }))
 
@@ -314,7 +314,7 @@ export const removeStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authActio
     return { success: false, error: result.error }
   }
 
-  revalidatePath('/settings/staff')
+  revalidatePath('/app/settings/staff')
   return { success: true, data: result }
 }))
 
@@ -447,14 +447,14 @@ export const assignStaffToBranch = requirePermission(
   PERMISSIONS.STAFF_MANAGE,
   authAction(async (data: { staffId: string; branchId: string | null }, ctx) => {
     const adminClient = await createAdminClient()
-    const { error, count } = await adminClient
+    const { data: updatedData, error } = await adminClient
       .from('business_members')
       .update({ branch_id: data.branchId })
       .eq('user_id', data.staffId)
       .eq('business_id', ctx.businessId)
-      .select('user_id', { count: 'exact', head: true })
+      .select('user_id')
     if (error) return { success: false, error: error.message }
-    if (count === 0) return { success: false, error: 'কর্মী পাওয়া যায়নি।' }
+    if (!updatedData || updatedData.length === 0) return { success: false, error: 'কর্মী পাওয়া যায়নি।' }
     revalidatePath('/app/settings')
     return { success: true, data: null }
   })

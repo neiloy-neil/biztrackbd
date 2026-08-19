@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { adminReplyToTicket } from '@/domains/support/actions'
+import { adminReplyToTicket, uploadSupportAttachmentAdmin } from '@/domains/support/actions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Paperclip, Lock, Eye } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
@@ -24,20 +23,16 @@ export default function AdminTicketReplyForm({ ticketId }: { ticketId: string })
     try {
       let attachmentUrl = null
       if (file) {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Not authenticated')
-
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random()}.${fileExt}`
-        const filePath = `admin/${user.id}/${fileName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('support-attachments')
-          .upload(filePath, file)
-
-        if (uploadError) throw uploadError
-        attachmentUrl = filePath
+        const formData = new FormData()
+        formData.append('file', file)
+        const uploadRes = await uploadSupportAttachmentAdmin(formData)
+        if (!uploadRes.success) {
+          throw new Error(uploadRes.error || 'Upload failed')
+        }
+        if (!uploadRes.data) {
+          throw new Error('Upload failed: No data returned')
+        }
+        attachmentUrl = uploadRes.data
       }
 
       await adminReplyToTicket({ ticketId, message, isInternalNote: isInternal, attachmentUrl: attachmentUrl || undefined })

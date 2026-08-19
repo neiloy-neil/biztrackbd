@@ -1,11 +1,20 @@
 'use client'
 
 import { CreditCard, PowerOff, Power, Ban, Settings2 } from 'lucide-react'
-import { suspendBusinessAction, reactivateBusinessAction, deleteBusinessAction } from '@/domains/admin/actions'
+import { suspendBusinessAction, reactivateBusinessAction, deleteBusinessAction, updateBusinessPlanAction } from '@/domains/admin/actions'
 import { useRouter } from 'next/navigation'
 
 export function ActionsMenu({ businessId, status }: { businessId: string, status: string }) {
   const router = useRouter()
+
+  
+  const handleChangePlan = async () => {
+    const planId = prompt('Enter new Plan ID (e.g., plan_premium, plan_starter):')
+    if (!planId) return
+    const reason = prompt('Enter reason for manual override:') || 'Admin override'
+    await updateBusinessPlanAction({ businessId, planId, reason })
+    router.refresh()
+  }
 
   const handleSuspend = async () => {
     if (!confirm('Are you sure you want to suspend this business?')) return
@@ -30,7 +39,7 @@ export function ActionsMenu({ businessId, status }: { businessId: string, status
       
       <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
         <div className="p-2 space-y-1">
-          <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center gap-2">
+          <button onClick={handleChangePlan} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> Change Plan
           </button>
           

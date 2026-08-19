@@ -62,3 +62,38 @@ export const markAllNotificationsAsRead = authAction(async (data: void, ctx) => 
 
   return { success: true, data: null }
 })
+
+export const triggerSystemAlert = authAction(async (data: { type: 'sync_failed' | 'system_incident', message: string }, ctx) => {
+  const supabase = await createClient()
+
+  // Ensure idempotency: Max 1 per hour for the same type to prevent spamming
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+  const { data: recent, error: fetchError } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('business_id', ctx.businessId)
+    .eq('type', data.type)
+    .gte('created_at', oneHourAgo)
+    .limit(1)
+    .maybeSingle()
+
+  if (fetchError) throw fetchError
+
+  if (recent) {
+    return { success: true, data: { status: 'skipped_recent' } }
+  }
+
+  const { error } = await supabase
+    .from('notifications')
+    .insert({
+      business_id: ctx.businessId,
+      type: data.type,
+      title: data.type === 'sync_failed' ? 'Offline Sync Failed' : 'System Incident',
+      message: data.message
+    })
+
+  if (error) throw error
+
+  return { success: true, data: { status: 'alert_created' } }
+})

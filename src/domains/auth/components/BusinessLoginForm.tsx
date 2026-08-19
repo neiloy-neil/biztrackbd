@@ -79,7 +79,7 @@ export function BusinessLoginForm() {
       setError(res.error || 'Invalid PIN')
       setLoading(false)
     } else {
-      router.push(res.redirectTo || '/dashboard')
+      router.push(res.redirectTo || '/app/dashboard')
     }
   }
 
@@ -158,7 +158,7 @@ export function BusinessLoginForm() {
       if (res.error?.includes('OTP')) setStep('forgot_otp')
       setLoading(false)
     } else {
-      router.push(res.redirectTo || '/dashboard')
+      router.push(res.redirectTo || '/app/dashboard')
     }
   }
 

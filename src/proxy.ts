@@ -93,7 +93,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (user && isLoginPage) {
-      const dashboardUrl = isLocalhost ? '/app/dashboard' : '/dashboard'
+      const dashboardUrl = '/app/dashboard'
       return NextResponse.redirect(new URL(dashboardUrl, request.url))
     }
   }

@@ -3,6 +3,7 @@ import { getRecentTransactions } from '../actions'
 import { formatBanglaCurrency } from '@/lib/utils/bangla'
 import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
 import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
+import { ReturnSaleModal } from '@/domains/transactions/components/ReturnSaleModal'
 
 export async function RecentTransactions() {
   const res = await getRecentTransactions({ limit: 5 })
@@ -40,7 +41,15 @@ export async function RecentTransactions() {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <TransactionAudit transactionId={txn.id} />
-                  <VoidTransactionButton transactionId={txn.id} state={txn.state} />
+                  
+                  <div className="flex gap-2">
+                    {txn.type === 'sale' && txn.state === 'completed' ? (
+                      <ReturnSaleModal transactionId={txn.id} />
+                    ) : (
+                      <VoidTransactionButton transactionId={txn.id} state={txn.state} />
+                    )}
+                  </div>
+
                 </div>
               </div>
             ))}

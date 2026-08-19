@@ -41,7 +41,7 @@ async function getRedirectPath(userId: string): Promise<string> {
 
   // If Admin logging in via the admin portal
   if (adminData && referer.includes('/admin')) {
-    return isLocalhost ? '/admin/dashboard' : '/dashboard'
+    return '/admin/dashboard'
   }
 
   // Not an admin, or Admin logging in via normal app portal -> go to app

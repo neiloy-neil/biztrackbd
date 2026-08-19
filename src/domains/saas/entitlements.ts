@@ -17,7 +17,22 @@ export interface EntitlementsPayload {
  * Wrapped in React cache to prevent duplicate queries during a single Server Request cycle.
  */
 export const getEntitlements = cache(async (businessId: string): Promise<EntitlementsPayload | null> => {
-  const supabase = await createClient()
+  let supabase
+  try {
+    const { createAdminAuthClient } = await import('@/domains/auth/admin-actions')
+    const adminAuthClient = await createAdminAuthClient()
+    const { data: { user: adminUser } } = await adminAuthClient.auth.getUser()
+    
+    if (adminUser) {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      supabase = createAdminClient()
+    } else {
+      supabase = await createClient()
+    }
+  } catch (e) {
+    supabase = await createClient()
+  }
+
   const { data, error } = await supabase.rpc('get_business_entitlements', { p_business_id: businessId })
 
   if (error || !data) {

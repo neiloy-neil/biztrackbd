@@ -19,7 +19,7 @@ export default async function StaffManagementPage() {
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 bg-slate-50 min-h-screen">
       <div className="flex items-center gap-4">
-        <Link href="/settings" className="text-slate-500 hover:text-slate-700">
+        <Link href="/app/settings" className="text-slate-500 hover:text-slate-700">
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex items-center gap-2">

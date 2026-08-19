@@ -262,3 +262,89 @@ export const voidTransactionAction = authAction(async (data: {
   
   return { success: true, data: null }
 })
+
+export const getTransactionForReturn = authAction(async (data: { id: string }, ctx) => {
+  const supabase = await createClient()
+
+  const { data: txn, error: txnError } = await supabase
+    .from('transactions')
+    .select('id, type, state, party_id, total_amount, subtotal, discount, transaction_date')
+    .eq('id', data.id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (txnError || !txn) {
+    return { success: false, error: 'Transaction not found.' }
+  }
+
+  if (txn.type !== 'sale') {
+    return { success: false, error: 'Only sales can be returned via this flow.' }
+  }
+
+  if (txn.state !== 'completed') {
+    return { success: false, error: 'Only completed sales can be returned.' }
+  }
+
+  const { data: items, error: itemsError } = await supabase
+    .from('transaction_items')
+    .select(`
+      id, quantity, unit_price, subtotal, returned_quantity,
+      product:products(id, name, sku)
+    `)
+    .eq('transaction_id', txn.id)
+
+  if (itemsError) {
+    return { success: false, error: 'Failed to fetch items.' }
+  }
+
+  return { success: true, data: { transaction: txn, items } }
+})
+
+export const processSaleReturnAction = idempotentAction(async (data: {
+  transaction_id: string
+  items: Array<{ id: string, return_qty: number }>
+  payments: Array<{ account_id: string, amount: number }>
+  reason: string
+}, ctx) => {
+  if (!canCreateSales(ctx.role)) {
+    return { success: false, error: 'Permission Denied: Requires sales privileges to process returns.' }
+  }
+
+  // Basic validation
+  if (data.items.length === 0 || data.items.every(i => i.return_qty <= 0)) {
+    return { success: false, error: 'Must return at least one item.' }
+  }
+
+  const supabase = await createClient()
+
+  // Get the default branch
+  const { data: branch } = await supabase
+    .from('branches')
+    .select('id')
+    .eq('business_id', ctx.businessId)
+    .limit(1)
+    .single()
+
+  if (!branch) {
+    return { success: false, error: 'Branch not found.' }
+  }
+
+  const { data: returnTxnId, error: rpcError } = await supabase.rpc('process_sale_return_atomic', {
+    p_business_id: ctx.businessId,
+    p_branch_id: branch.id,
+    p_parent_transaction_id: data.transaction_id,
+    p_items: data.items,
+    p_payments: data.payments.length > 0 ? data.payments : null,
+    p_reason: data.reason,
+    p_created_by: ctx.userId
+  })
+
+  if (rpcError) {
+    console.error('Failed to process return:', rpcError)
+    return { success: false, error: 'Return processing failed: ' + rpcError.message }
+  }
+
+  revalidatePath('/app', 'layout')
+  
+  return { success: true, data: { id: returnTxnId } }
+})

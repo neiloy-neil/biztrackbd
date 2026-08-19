@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { format } from '@/lib/utils/date'
 import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
 import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
+import { ReturnSaleModal } from '@/domains/transactions/components/ReturnSaleModal'
 import { useInView } from 'react-intersection-observer'
 import { Loader2 } from 'lucide-react'
 

@@ -22,11 +22,18 @@ export default async function ClosingPage() {
     return <div className="p-4 text-rose-500">Error loading closing summary: {res?.error}</div>
   }
 
+  // Fetch account balances for reconciliation
+  // Wait, I can't call getAccountBalancesForReconciliation easily if it requires a context.
+  // Actually, I can just call it like an action.
+  const { getAccountBalancesForReconciliation } = await import('@/domains/closing/actions')
+  const accountsRes = await getAccountBalancesForReconciliation({ date: today })
+
   return (
     <div className="flex-1 bg-slate-50 min-h-screen pb-24">
       <ClosingClient 
         today={today} 
-        closingData={res.data as any} 
+        closingData={res.data as any}
+        reconciliationAccounts={accountsRes?.success ? accountsRes.data : []}
       />
     </div>
   )

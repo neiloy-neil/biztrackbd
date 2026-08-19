@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logPlatformAction } from '@/lib/security/audit'
 import { adminAction } from '@/lib/actions/safe-action'
 import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
+import { auditLog } from '@/lib/security/audit'
 
 // Helper to get a service role client inside an admin action
 // adminAction already verifies platform admin status securely

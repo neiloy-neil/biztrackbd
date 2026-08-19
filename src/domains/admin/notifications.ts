@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { adminAction } from '@/lib/actions/safe-action'
 import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
+import { auditLog } from '@/lib/security/audit'
 
 // Helper to get a service role client inside an admin action
 // adminAction already verifies platform admin status securely
@@ -53,7 +54,14 @@ export const markNotificationAsRead = adminAction(PLATFORM_PERMISSIONS.SETTINGS_
 
   if (error) return { success: false, error: error.message }
   
-  revalidatePath('/admin/notifications')
+  await auditLog({
+      action: 'notifications_mutated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/notifications')
   return { success: true, data: null }
 })
 
@@ -75,7 +83,14 @@ export const markAllNotificationsAsRead = adminAction(PLATFORM_PERMISSIONS.SETTI
 
   if (error) return { success: false, error: error.message }
   
-  revalidatePath('/admin/notifications')
+  await auditLog({
+      action: 'notifications_mutated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/notifications')
   return { success: true, data: null }
 })
 
@@ -88,7 +103,14 @@ export const deleteNotification = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANA
 
   if (error) return { success: false, error: error.message }
   
-  revalidatePath('/admin/notifications')
+  await auditLog({
+      action: 'notifications_mutated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/notifications')
   return { success: true, data: null }
 })
 
@@ -104,6 +126,13 @@ export const updateNotificationPreferences = adminAction(PLATFORM_PERMISSIONS.SE
 
   if (error) return { success: false, error: error.message }
 
-  revalidatePath('/admin/notifications/preferences')
+  await auditLog({
+      action: 'notification_preferences_updated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/notifications/preferences')
   return { success: true, data: null }
 })

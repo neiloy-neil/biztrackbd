@@ -130,7 +130,7 @@ export default async function PartyPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 pb-24 bg-[#FAFAFA] min-h-screen">
       <div className="flex items-center justify-between mb-2">
-        <Link href="/parties">
+        <Link href="/app/parties">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>

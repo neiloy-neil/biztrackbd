@@ -11,7 +11,7 @@ export function DashboardEmptyState() {
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link href="/app/products" className="group bg-white p-4 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all">
+          <Link href="/app/inventory" className="group bg-white p-4 rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all">
             <div className="bg-indigo-50 w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:bg-indigo-600 transition-colors">
               <Package className="h-5 w-5 text-indigo-600 group-hover:text-white" />
             </div>

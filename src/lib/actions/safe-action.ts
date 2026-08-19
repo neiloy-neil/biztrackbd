@@ -8,6 +8,7 @@ import crypto from 'crypto'
 type AuthContext = {
   userId: string
   businessId: string
+  branchId?: string
   role: string
   requestId: string
 }
@@ -50,10 +51,17 @@ export function authAction<TInput, TOutput>(
     // 3. Validate Tenant Membership + Business Status in one query
     const { data: memberData, error: memberError } = await supabase
       .from('business_members')
-      .select('role, businesses!inner(status)')
+      .select('role, branch_id, businesses!inner(status)')
       .eq('business_id', activeBusinessId)
       .eq('user_id', user.id)
       .maybeSingle()
+      
+    let branchId = memberData?.branch_id
+    if (!branchId && activeBusinessId) {
+       // fallback to primary branch
+       const { data: branch } = await supabase.from('branches').select('id').eq('business_id', activeBusinessId).limit(1).single()
+       if (branch) branchId = branch.id
+    }
 
     if (memberError || !memberData) {
       await auditLog({
@@ -78,6 +86,7 @@ export function authAction<TInput, TOutput>(
       const result = await action(data, {
         userId: user.id,
         businessId: activeBusinessId,
+        branchId,
         role: memberData.role,
         requestId
       })

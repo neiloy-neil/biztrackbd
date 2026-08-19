@@ -128,6 +128,6 @@ export const createParty = requirePermission(PERMISSIONS.CUSTOMERS_MANAGE, authA
 
   if (error) return { success: false, error: error.message }
 
-  revalidatePath('/parties')
+  revalidatePath('/app/parties')
   return { success: true, data: party }
 }))

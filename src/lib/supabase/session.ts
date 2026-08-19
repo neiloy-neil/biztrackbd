@@ -69,12 +69,12 @@ export async function updateSession(request: NextRequest) {
           .single()
           
         if (adminMember) {
-          url.pathname = url.hostname.startsWith('admin.') ? '/dashboard' : '/admin/dashboard'
+          url.pathname = url.hostname.startsWith('admin.') ? '/admin/dashboard' : '/admin/dashboard'
         } else {
           url.pathname = '/app/dashboard'
         }
       } else if (isAppRoute) {
-        url.pathname = url.hostname.startsWith('app.') ? '/dashboard' : '/app/dashboard'
+        url.pathname = '/app/dashboard'
       } else {
         url.pathname = '/app/dashboard'
       }
@@ -161,7 +161,7 @@ export async function updateSession(request: NextRequest) {
         }
 
         if (isOnboardingPath) {
-          url.pathname = url.hostname.startsWith('app.') ? '/dashboard' : '/app/dashboard'
+          url.pathname = '/app/dashboard'
           return NextResponse.redirect(url)
         }
       }

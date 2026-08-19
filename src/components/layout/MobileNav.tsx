@@ -29,14 +29,14 @@ export function MobileNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t bg-background px-2 pb-safe md:hidden">
         <Link
           href="/app/dashboard"
-          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/dashboard' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/app/dashboard' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Home className="h-5 w-5" />
           <span className="text-[10px] font-medium">ড্যাশবোর্ড</span>
         </Link>
         <Link
           href="/app/parties"
-          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/parties' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/app/parties' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Users className="h-5 w-5" />
           <span className="text-[10px] font-medium">পার্টি</span>
@@ -92,14 +92,14 @@ export function MobileNav() {
 
         <Link
           href="/app/inventory"
-          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/inventory' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/app/inventory' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Package className="h-5 w-5" />
           <span className="text-[10px] font-medium">ইনভেন্টরি</span>
         </Link>
         <Link
           href="/app/settings"
-          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/settings' ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`flex flex-col items-center justify-center space-y-1 ${normalizedPath === '/app/settings' ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <Menu className="h-5 w-5" />
           <span className="text-[10px] font-medium">মেনু</span>

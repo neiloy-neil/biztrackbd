@@ -42,6 +42,10 @@ export default async function AdminLayout({
             <LayoutDashboard size={20} />
             <span>Dashboard</span>
           </Link>
+          <Link href="/admin/usage" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
+            <Activity size={20} />
+            <span>Usage Analytics</span>
+          </Link>
 
           <Link href="/admin/users" className="flex items-center space-x-3 text-gray-300 hover:bg-gray-800 hover:text-white px-3 py-2 rounded-lg transition-colors">
             <Users size={20} />

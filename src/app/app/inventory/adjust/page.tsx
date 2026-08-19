@@ -53,7 +53,7 @@ export default function AdjustInventoryPage() {
     })
 
     if (res.success) {
-      router.push('/inventory')
+      router.push('/app/inventory')
     } else {
       setError(res.error || 'সংরক্ষণ করা যায়নি')
       setLoading(false)
@@ -63,7 +63,7 @@ export default function AdjustInventoryPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 pb-24 bg-slate-50 min-h-screen">
       <div className="flex items-center gap-4 mb-4 max-w-2xl mx-auto">
-        <Link href="/inventory">
+        <Link href="/app/inventory">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>

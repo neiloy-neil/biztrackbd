@@ -17,7 +17,10 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
   min_stock: number,
   initial_stock?: number,
   supplier_id?: string,
-  image_url?: string
+  image_url?: string,
+  tracking_type?: 'simple' | 'variant' | 'batch' | 'serialized',
+  variants?: { sku: string, name_override: string, price_override: number, attributes: any }[],
+  lots?: { identifier: string, expiry_date: string, variant_id?: string }[]
 }, ctx) => {
   const supabase = await createClient()
 
@@ -25,6 +28,7 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
     return { success: false, error: 'Invalid product details.' }
   }
 
+  // First, create the core product via RPC (which defaults tracking_type to simple)
   const { data: productId, error } = await supabase.rpc('create_product_atomic', {
     p_business_id: ctx.businessId,
     p_name: data.name,
@@ -41,12 +45,46 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
     p_created_by: ctx.userId
   })
 
-  if (error) {
+  if (error || !productId) {
     console.error('Failed to create product:', error)
-    return { success: false, error: 'Product creation failed: ' + error.message }
+    return { success: false, error: 'Product creation failed: ' + (error?.message || 'Unknown error') }
   }
 
-  revalidatePath('/inventory')
+  // Update tracking_type if not simple
+  if (data.tracking_type && data.tracking_type !== 'simple') {
+    await supabase.from('products').update({ tracking_type: data.tracking_type }).eq('id', productId)
+  }
+
+  // Insert Variants
+  let variantMap: Record<string, string> = {}
+  if (data.variants && data.variants.length > 0) {
+    for (const variant of data.variants) {
+      const { data: vData } = await supabase.from('product_variants').insert({
+        product_id: productId,
+        sku: variant.sku,
+        name_override: variant.name_override,
+        price_override: variant.price_override,
+        attributes: variant.attributes
+      }).select('id').single()
+      if (vData) {
+         variantMap[variant.sku] = vData.id
+      }
+    }
+  }
+
+  // Insert Lots (Batches, Serials)
+  if (data.lots && data.lots.length > 0) {
+    for (const lot of data.lots) {
+       await supabase.from('inventory_lots').insert({
+         product_id: productId,
+         variant_id: lot.variant_id ? variantMap[lot.variant_id] : null,
+         identifier: lot.identifier,
+         expiry_date: lot.expiry_date ? lot.expiry_date : null
+       })
+    }
+  }
+
+  revalidatePath('/app/inventory')
   return { success: true, data: { id: productId } }
 }))
 
@@ -66,7 +104,9 @@ export const getProducts = authAction(async (data: {
     .select(`
       *,
       category:product_categories(name),
-      supplier:parties(name)
+      supplier:parties(name),
+      variants:product_variants(*),
+      lots:inventory_lots(*)
     `)
     .eq('business_id', ctx.businessId)
     .is('deleted_at', null)
@@ -89,7 +129,7 @@ export const getProducts = authAction(async (data: {
   if (data.lowStockOnly) {
     query = supabase
       .from('products')
-      .select(`*, category:product_categories(name), supplier:parties(name)`)
+      .select(`*, category:product_categories(name), supplier:parties(name), variants:product_variants(*), lots:inventory_lots(*)`)
       .eq('business_id', ctx.businessId)
       .is('deleted_at', null)
       .order('name')
@@ -160,23 +200,15 @@ export const recordMovement = requirePermission(PERMISSIONS.INVENTORY_MANAGE, au
     return { success: false, error: 'Product not found.' }
   }
 
-  // Get default branch
-  const { data: branch } = await supabase
-    .from('branches')
-    .select('id')
-    .eq('business_id', ctx.businessId)
-    .limit(1)
-    .single()
-
-  if (!branch) {
-    return { success: false, error: 'Branch not found.' }
+  if (!ctx.branchId) {
+    return { success: false, error: 'Active branch context missing.' }
   }
 
   const { data: movement, error } = await supabase
     .from('inventory_movements')
     .insert({
       business_id: ctx.businessId,
-      branch_id: branch.id,
+      branch_id: ctx.branchId,
       product_id: data.product_id,
       type: data.type,
       quantity: data.quantity,
@@ -190,8 +222,35 @@ export const recordMovement = requirePermission(PERMISSIONS.INVENTORY_MANAGE, au
     return { success: false, error: error.message }
   }
 
-  revalidatePath('/inventory')
+  revalidatePath('/app/inventory')
   revalidatePath(`/inventory/products/${data.product_id}`)
 
   return { success: true, data: movement }
 }))
+
+
+export const getProductVariants = authAction(async (data: { productId: string }, ctx) => {
+  const supabase = await createClient()
+  const { data: variants, error } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', data.productId)
+    .order('created_at', { ascending: false })
+  
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: variants }
+})
+
+export const getInventoryLots = authAction(async (data: { productId: string, variantId?: string }, ctx) => {
+  const supabase = await createClient()
+  let query = supabase.from('inventory_lots').select('*').eq('product_id', data.productId)
+  
+  if (data.variantId) {
+    query = query.eq('variant_id', data.variantId)
+  }
+  
+  const { data: lots, error } = await query.order('created_at', { ascending: false })
+  
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: lots }
+})

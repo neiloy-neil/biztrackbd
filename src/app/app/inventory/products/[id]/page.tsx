@@ -29,7 +29,7 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 pb-24 bg-slate-50 min-h-screen">
       <div className="flex items-center gap-4 mb-4">
-        <Link href="/inventory">
+        <Link href="/app/inventory">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>

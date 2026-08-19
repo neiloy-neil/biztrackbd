@@ -46,7 +46,7 @@ export default async function FeatureFlagsPage({
 
       <Card>
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <form className="relative">
+          <form onSubmit={(e) => e.preventDefault()} className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <Input 
               name="q"

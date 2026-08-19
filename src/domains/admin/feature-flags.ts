@@ -5,6 +5,7 @@ import { logPlatformAction } from '@/lib/security/audit'
 import { revalidatePath } from 'next/cache'
 import { adminAction } from '@/lib/actions/safe-action'
 import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
+import { auditLog } from '@/lib/security/audit'
 
 // Helper to get a service role client inside an admin action
 // adminAction already verifies platform admin status securely
@@ -33,7 +34,14 @@ export const createFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAG
     new_state: { description: params.description, is_global_enabled: params.isGlobalEnabled }
   })
 
-  revalidatePath('/admin/feature-flags')
+  await auditLog({
+      action: 'feature_flag_mutated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/feature-flags')
   return { success: true, data: null }
 })
 
@@ -53,7 +61,14 @@ export const toggleGlobalFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS
     new_state: { is_global_enabled: params.isGlobalEnabled }
   })
 
-  revalidatePath('/admin/feature-flags')
+  await auditLog({
+      action: 'feature_flag_mutated',
+      entity_type: 'platform',
+      entity_id: ctx.userId,
+      business_id: 'PLATFORM',
+      user_id: ctx.userId,
+    })
+    revalidatePath('/admin/feature-flags')
   revalidatePath(`/admin/feature-flags/${params.id}`)
   return { success: true, data: null }
 })

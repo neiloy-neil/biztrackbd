@@ -84,7 +84,7 @@ export default async function InventoryDashboardPage({
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-100">
-          <form className="flex gap-2 max-w-sm">
+          <form onSubmit={(e) => e.preventDefault()} className="flex gap-2 max-w-sm">
             <Input 
               name="search" 
               defaultValue={search} 
@@ -93,7 +93,7 @@ export default async function InventoryDashboardPage({
             />
             <Button type="submit" variant="secondary">খুঁজুন</Button>
             {search || isLowStockOnly ? (
-              <Link href="/inventory">
+              <Link href="/app/inventory">
                 <Button variant="ghost">ক্লিয়ার</Button>
               </Link>
             ) : null}

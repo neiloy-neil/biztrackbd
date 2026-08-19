@@ -23,12 +23,13 @@ type Branch = { id: string; name: string }
 
 type CartItem = {
   product: Product
+  variant?: any
+  lot?: any
   quantity: number
   unit_price: number
   subtotal: number
 }
 
-// 'due' means full credit — no cash account used
 type CheckoutPaymentMode = 'due' | string // string = account_id
 
 export default function POSClient({
@@ -59,11 +60,12 @@ export default function POSClient({
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
   const [selectedBranchId, setSelectedBranchId] = useState(branches[0]?.id || '')
 
-  // Checkout state
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectionModalOpen, setSelectionModalOpen] = useState(false)
+
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [paymentMode, setPaymentMode] = useState<CheckoutPaymentMode>('')
   const [paymentAmount, setPaymentAmount] = useState('')
-  // New customer inline creation
   const [showNewCustomer, setShowNewCustomer] = useState(false)
   const [newCustomerName, setNewCustomerName] = useState('')
   const [newCustomerPhone, setNewCustomerPhone] = useState('')
@@ -89,50 +91,63 @@ export default function POSClient({
 
   const hasCustomer = !!selectedCustomerId || (showNewCustomer && !!newCustomerName)
 
-  const addToCart = (product: Product) => {
+  const handleProductClick = (product: Product) => {
+    if (product.tracking_type === 'variant' || product.tracking_type === 'serialized' || product.tracking_type === 'batch') {
+      setSelectedProduct(product)
+      setSelectionModalOpen(true)
+    } else {
+      addToCart(product)
+    }
+  }
+
+  const addToCart = (product: Product, variant?: any, lot?: any) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id)
-      if (existing) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.unit_price }
-            : item
-        )
+      const itemKey = product.id + (variant ? `-${variant.id}` : '') + (lot ? `-${lot.id}` : '')
+      const existingIndex = prev.findIndex(item => 
+         item.product.id === product.id && 
+         item.variant?.id === variant?.id && 
+         item.lot?.id === lot?.id
+      )
+
+      if (existingIndex >= 0) {
+        const newCart = [...prev]
+        newCart[existingIndex] = {
+          ...newCart[existingIndex],
+          quantity: newCart[existingIndex].quantity + 1,
+          subtotal: (newCart[existingIndex].quantity + 1) * newCart[existingIndex].unit_price
+        }
+        return newCart
       }
-      return [...prev, { product, quantity: 1, unit_price: Number(product.price), subtotal: Number(product.price) }]
+
+      const price = variant?.price_override ?? product.price
+      return [...prev, { product, variant, lot, quantity: 1, unit_price: Number(price), subtotal: Number(price) }]
+    })
+    setSelectionModalOpen(false)
+    setSelectedProduct(null)
+  }
+
+  const updateQuantity = (index: number, delta: number) => {
+    setCart(prev => {
+      const newCart = [...prev]
+      const item = newCart[index]
+      const newQty = Math.max(1, item.quantity + delta)
+      newCart[index] = { ...item, quantity: newQty, subtotal: newQty * item.unit_price }
+      return newCart
     })
   }
 
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
-        const newQty = Math.max(1, item.quantity + delta)
-        return { ...item, quantity: newQty, subtotal: newQty * item.unit_price }
-      }
-      return item
-    }))
+  const removeFromCart = (index: number) => {
+    const itemToRemove = cart[index]
+    setCart(prev => prev.filter((_, i) => i !== index))
+    toast.success(`${itemToRemove.product.name} সরানো হয়েছে`)
   }
 
-  const removeFromCart = (productId: string) => {
-    const itemToRemove = cart.find(item => item.product.id === productId)
-    if (!itemToRemove) return
-    setCart(prev => prev.filter(item => item.product.id !== productId))
-    toast.success(`${itemToRemove.product.name} সরানো হয়েছে`, {
-      action: {
-        label: 'Undo',
-        onClick: () => setCart(prev => [...prev, itemToRemove])
-      },
-      duration: 3000
+  const saveItemEdit = (index: number, newUnitPrice: number, newQuantity: number) => {
+    setCart(prev => {
+      const newCart = [...prev]
+      newCart[index] = { ...newCart[index], quantity: newQuantity, unit_price: newUnitPrice, subtotal: newQuantity * newUnitPrice }
+      return newCart
     })
-  }
-
-  const saveItemEdit = (productId: string, newUnitPrice: number, newQuantity: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.product.id === productId) {
-        return { ...item, quantity: newQuantity, unit_price: newUnitPrice, subtotal: newQuantity * newUnitPrice }
-      }
-      return item
-    }))
     setEditingItem(null)
   }
 
@@ -148,6 +163,8 @@ export default function POSClient({
 
     const items: POSCartItem[] = cart.map(item => ({
       product_id: item.product.id,
+      variant_id: item.variant?.id,
+      lot_id: item.lot?.id,
       quantity: item.quantity,
     }))
 
@@ -259,7 +276,7 @@ export default function POSClient({
               <tbody>
                 {cart.map((item, idx) => (
                   <tr key={idx}>
-                    <td className="py-1">{item.product.name}</td>
+                    <td className="py-1">{item.product.name} {item.variant ? `(${item.variant.name_override})` : ''}</td>
                     <td className="text-right py-1">{item.quantity}</td>
                     <td className="text-right py-1">{item.subtotal}</td>
                   </tr>
@@ -282,10 +299,9 @@ export default function POSClient({
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full bg-slate-50 relative overflow-hidden">
-      {/* Left: Product Grid */}
       <div className="flex-1 flex flex-col h-full md:border-r border-slate-200 pb-16 md:pb-0">
         <div className="p-4 bg-white border-b border-slate-200 flex items-center gap-4">
-          <Link href="/dashboard">
+          <Link href="/app/dashboard">
             <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
           </Link>
           {branches.length > 1 && (
@@ -308,10 +324,10 @@ export default function POSClient({
                 if (e.key === 'Enter' && search) {
                   const exactMatch = initialProducts.find(p => p.barcode === search || p.sku === search)
                   if (exactMatch) {
-                    addToCart(exactMatch)
+                    handleProductClick(exactMatch)
                     setSearch('')
                   } else if (filteredProducts.length === 1) {
-                    addToCart(filteredProducts[0])
+                    handleProductClick(filteredProducts[0])
                     setSearch('')
                   }
                 }
@@ -357,9 +373,14 @@ export default function POSClient({
             {filteredProducts.map(p => (
               <button
                 key={p.id}
-                onClick={() => addToCart(p)}
-                className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-[#007AFF] hover:shadow-md transition-all text-left flex flex-col active:scale-95"
+                onClick={() => handleProductClick(p)}
+                className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-[#007AFF] hover:shadow-md transition-all text-left flex flex-col active:scale-95 relative"
               >
+                {p.tracking_type !== 'simple' && (
+                  <span className="absolute top-2 right-2 bg-slate-900 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    {p.tracking_type === 'variant' ? 'VARIANTS' : p.tracking_type === 'batch' ? 'BATCH' : 'SN'}
+                  </span>
+                )}
                 <div className="aspect-square bg-slate-50 rounded-lg mb-3 flex items-center justify-center w-full">
                   {p.image_url
                     ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover rounded-lg" />
@@ -374,7 +395,6 @@ export default function POSClient({
         </div>
       </div>
 
-      {/* Mobile Cart Button */}
       <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white border-t border-slate-200 z-10 flex justify-between items-center">
         <div className="flex flex-col">
           <span className="text-xs font-bold text-slate-500 uppercase">Cart ({cart.length})</span>
@@ -385,7 +405,6 @@ export default function POSClient({
         </Button>
       </div>
 
-      {/* Right: Cart */}
       <div className={`w-full md:w-[400px] flex flex-col h-full bg-white shadow-xl z-20 shrink-0 fixed md:relative right-0 top-0 transition-transform duration-300 ${showMobileCart ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
         <div className="p-4 bg-slate-900 text-white flex items-center gap-2">
           <ShoppingCart className="w-5 h-5" />
@@ -403,18 +422,20 @@ export default function POSClient({
               <p>কার্ট খালি</p>
             </div>
           ) : (
-            cart.map(item => (
-              <div key={item.product.id} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+            cart.map((item, idx) => (
+              <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <div className="flex-1">
                   <h4 className="font-medium text-slate-900 line-clamp-1">{item.product.name}</h4>
-                  <div className="text-sm text-slate-500">৳{item.unit_price}</div>
+                  {item.variant && <span className="text-xs text-[#007AFF] font-semibold">{item.variant.name_override}</span>}
+                  {item.lot && <span className="text-xs text-orange-600 font-semibold ml-1">[{item.lot.identifier}]</span>}
+                  <div className="text-sm text-slate-500 mt-1">৳{item.unit_price}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => updateQuantity(item.product.id, -1)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
+                  <button onClick={() => updateQuantity(idx, -1)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
                     <Minus className="w-5 h-5" />
                   </button>
                   <span className="w-8 text-center font-bold text-lg">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.product.id, 1)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
+                  <button onClick={() => updateQuantity(idx, 1)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
@@ -422,10 +443,10 @@ export default function POSClient({
                   <div className="font-bold text-slate-900">৳{item.subtotal}</div>
                 </div>
                 <div className="flex flex-col gap-1 ml-1">
-                  <button onClick={() => setEditingItem(item)} className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                  <button onClick={() => setEditingItem({...item, _index: idx} as any)} className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
                     <Edit2 className="w-5 h-5" />
                   </button>
-                  <button onClick={() => removeFromCart(item.product.id)} className="w-12 h-12 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
+                  <button onClick={() => removeFromCart(idx)} className="w-12 h-12 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
@@ -463,7 +484,6 @@ export default function POSClient({
         </div>
       </div>
 
-      {/* Edit Item Modal */}
       <Dialog open={!!editingItem} onOpenChange={open => !open && setEditingItem(null)}>
         {editingItem && (
           <DialogContent className="sm:max-w-md">
@@ -482,7 +502,7 @@ export default function POSClient({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingItem(null)}>বাতিল</Button>
-              <Button onClick={() => saveItemEdit(editingItem.product.id, editingItem.unit_price, editingItem.quantity)} className="bg-[#007AFF] hover:bg-[#005bb5]">
+              <Button onClick={() => saveItemEdit((editingItem as any)._index, editingItem.unit_price, editingItem.quantity)} className="bg-[#007AFF] hover:bg-[#005bb5]">
                 সংরক্ষণ
               </Button>
             </DialogFooter>
@@ -490,7 +510,37 @@ export default function POSClient({
         )}
       </Dialog>
 
-      {/* Checkout Modal */}
+      <Dialog open={selectionModalOpen} onOpenChange={setSelectionModalOpen}>
+         {selectedProduct && (
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">{selectedProduct.name}</DialogTitle>
+                <p className="text-sm text-slate-500">Please select an option to add to cart</p>
+              </DialogHeader>
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                {selectedProduct.tracking_type === 'variant' && selectedProduct.variants && selectedProduct.variants.map((v: any) => (
+                  <Button key={v.id} variant="outline" className="w-full justify-between h-auto py-3" onClick={() => addToCart(selectedProduct, v)}>
+                     <span>{v.name_override}</span>
+                     <span className="font-bold text-[#007AFF]">৳{v.price_override || selectedProduct.price}</span>
+                  </Button>
+                ))}
+                {(selectedProduct.tracking_type === 'batch' || selectedProduct.tracking_type === 'serialized') && selectedProduct.lots && selectedProduct.lots.map((l: any) => (
+                  <Button key={l.id} variant="outline" className="w-full justify-between h-auto py-3" onClick={() => addToCart(selectedProduct, undefined, l)}>
+                     <span>{l.identifier}</span>
+                     {l.expiry_date && <span className="text-xs text-orange-500 ml-2">Exp: {l.expiry_date}</span>}
+                  </Button>
+                ))}
+                {(!selectedProduct.variants?.length && !selectedProduct.lots?.length) && (
+                   <p className="text-red-500 text-center">No options available in stock.</p>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectionModalOpen(false)}>Cancel</Button>
+              </DialogFooter>
+            </DialogContent>
+         )}
+      </Dialog>
+
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
         <DialogContent className="sm:max-w-md flex flex-col max-h-[90dvh]">
           <DialogHeader className="flex-shrink-0">
@@ -498,13 +548,11 @@ export default function POSClient({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-5 py-2 px-1 min-h-0">
-            {/* Total */}
             <div className="text-center p-4 bg-slate-50 rounded-lg border border-slate-100">
               <p className="text-sm text-slate-500 mb-1">মোট পরিমাণ</p>
               <h2 className="text-4xl font-bold text-slate-900">৳{cartTotal}</h2>
             </div>
 
-            {/* Customer */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>কাস্টমার</Label>
@@ -549,7 +597,6 @@ export default function POSClient({
               )}
             </div>
 
-            {/* Payment Method */}
             <div className="space-y-2">
               <Label>পেমেন্ট মাধ্যম</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -567,7 +614,6 @@ export default function POSClient({
                     {acc.name}
                   </button>
                 ))}
-                {/* Due / Credit option — always full width for visual distinction */}
                 <button
                   type="button"
                   onClick={() => { setPaymentMode('due'); setPaymentAmount('') }}
@@ -587,7 +633,6 @@ export default function POSClient({
               )}
             </div>
 
-            {/* Amount Received (only for cash/bkash modes) */}
             {!isDueMode && paymentMode && (
               <div className="space-y-2">
                 <Label>প্রাপ্ত পরিমাণ</Label>

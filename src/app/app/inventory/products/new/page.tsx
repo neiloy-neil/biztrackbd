@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
 
 export default function NewProductPage() {
@@ -16,17 +16,13 @@ export default function NewProductPage() {
   const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    barcode: '',
-    price: '',
-    cost: '',
-    unit: 'pcs',
-    min_stock: '0',
-    initial_stock: '0',
+    name: '', sku: '', barcode: '', price: '', cost: '', unit: 'pcs', min_stock: '0', initial_stock: '0', tracking_type: 'simple'
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [variants, setVariants] = useState<{sku: string, name_override: string, price_override: string}[]>([])
+  const [lots, setLots] = useState<{identifier: string, expiry_date: string}[]>([])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -34,6 +30,8 @@ export default function NewProductPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    const v = variants.map(v => ({...v, price_override: Number(v.price_override), attributes: {}}))
 
     const res = await createProduct({
       name: formData.name,
@@ -43,13 +41,16 @@ export default function NewProductPage() {
       cost: Number(formData.cost),
       unit: formData.unit,
       min_stock: Number(formData.min_stock),
-      initial_stock: Number(formData.initial_stock)
+      initial_stock: Number(formData.initial_stock),
+      tracking_type: formData.tracking_type as any,
+      variants: v,
+      lots: lots
     })
 
     if (res.success) {
-      router.push('/inventory')
+      router.push('/app/inventory')
     } else {
-      setError(res.error || 'সংরক্ষণ করা যায়নি')
+      setError(res.error || 'Failed to save product')
       setLoading(false)
     }
   }
@@ -57,67 +58,72 @@ export default function NewProductPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 pb-24 bg-slate-50 min-h-screen">
       <div className="flex items-center gap-4 mb-4 max-w-2xl mx-auto">
-        <Link href="/inventory">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">নতুন প্রোডাক্ট যোগ করুন</h2>
+        <Link href="/app/inventory"><Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button></Link>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">New Product</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-        <Card className="border-none shadow-sm">
-          <CardContent className="p-6 space-y-6">
-            <div className="space-y-2">
-              <Label>প্রোডাক্টের নাম *</Label>
-              <Input required name="name" value={formData.name} onChange={handleChange} placeholder="যেমন: Lux Soap 100g" />
-            </div>
-
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
+        <Card className="border-none shadow-sm"><CardContent className="p-6 space-y-4">
+            <div className="space-y-2"><Label>Product Name *</Label><Input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Lux Soap 100g" /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>বিক্রয় মূল্য (Price) *</Label>
-                <Input required type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} placeholder="0.00" />
-              </div>
-              <div className="space-y-2">
-                <Label>ক্রয় মূল্য (Cost) *</Label>
-                <Input required type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} placeholder="0.00" />
-              </div>
+              <div className="space-y-2"><Label>Price *</Label><Input required type="number" min="0" step="0.01" name="price" value={formData.price} onChange={handleChange} /></div>
+              <div className="space-y-2"><Label>Cost *</Label><Input required type="number" min="0" step="0.01" name="cost" value={formData.cost} onChange={handleChange} /></div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>SKU</Label>
-                <Input name="sku" value={formData.sku} onChange={handleChange} placeholder="Stock Keeping Unit" />
+              <div className="space-y-2"><Label>Tracking Type</Label>
+                <select name="tracking_type" value={formData.tracking_type} onChange={handleChange} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="simple">Simple</option>
+                  <option value="variant">Variants (Size, Color)</option>
+                  <option value="batch">Batch / Expiry</option>
+                  <option value="serialized">Serialized (IMEI, SN)</option>
+                </select>
               </div>
-              <div className="space-y-2">
-                <Label>বারকোড (Barcode)</Label>
-                <Input name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or type barcode" />
-              </div>
+              <div className="space-y-2"><Label>Unit *</Label><Input required name="unit" value={formData.unit} onChange={handleChange} placeholder="pcs, kg, box" /></div>
             </div>
+            {formData.tracking_type === 'simple' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Initial Stock</Label><Input type="number" name="initial_stock" value={formData.initial_stock} onChange={handleChange} /></div>
+                <div className="space-y-2"><Label>SKU</Label><Input name="sku" value={formData.sku} onChange={handleChange} /></div>
+              </div>
+            )}
+        </CardContent></Card>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>ইউনিট (Unit) *</Label>
-                <Input required name="unit" value={formData.unit} onChange={handleChange} placeholder="pcs, kg, box" />
-              </div>
-              <div className="space-y-2">
-                <Label>প্রারম্ভিক স্টক (Initial Stock)</Label>
-                <Input type="number" min="0" name="initial_stock" value={formData.initial_stock} onChange={handleChange} placeholder="0" />
-              </div>
-              <div className="space-y-2">
-                <Label>লো-স্টক অ্যালার্ট</Label>
-                <Input required type="number" min="0" name="min_stock" value={formData.min_stock} onChange={handleChange} placeholder="0" />
-              </div>
-            </div>
+        {formData.tracking_type === 'variant' && (
+           <Card className="border-none shadow-sm"><CardContent className="p-6 space-y-4">
+              <h3 className="font-semibold text-lg flex items-center justify-between">Variants
+                <Button type="button" variant="outline" size="sm" onClick={() => setVariants([...variants, {sku: '', name_override: '', price_override: ''}])}><Plus className="h-4 w-4 mr-2"/> Add Variant</Button>
+              </h3>
+              {variants.map((v, i) => (
+                <div key={i} className="flex gap-2 items-center bg-slate-50 p-3 rounded border">
+                  <Input placeholder="Size/Color (e.g. XL-Red)" value={v.name_override} onChange={e => {const nv = [...variants]; nv[i].name_override = e.target.value; setVariants(nv)}} />
+                  <Input placeholder="SKU" value={v.sku} onChange={e => {const nv = [...variants]; nv[i].sku = e.target.value; setVariants(nv)}} />
+                  <Input type="number" placeholder="Price" value={v.price_override} onChange={e => {const nv = [...variants]; nv[i].price_override = e.target.value; setVariants(nv)}} />
+                  <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => setVariants(variants.filter((_, idx) => idx !== i))}><Trash2 className="h-4 w-4"/></Button>
+                </div>
+              ))}
+           </CardContent></Card>
+        )}
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            
-            <Button type="submit" className="w-full bg-[#007AFF] hover:bg-[#005bb5]" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              সেভ করুন
-            </Button>
-          </CardContent>
-        </Card>
+        {(formData.tracking_type === 'batch' || formData.tracking_type === 'serialized') && (
+           <Card className="border-none shadow-sm"><CardContent className="p-6 space-y-4">
+              <h3 className="font-semibold text-lg flex items-center justify-between">Lots / Serials
+                <Button type="button" variant="outline" size="sm" onClick={() => setLots([...lots, {identifier: '', expiry_date: ''}])}><Plus className="h-4 w-4 mr-2"/> Add Lot</Button>
+              </h3>
+              {lots.map((l, i) => (
+                <div key={i} className="flex gap-2 items-center bg-slate-50 p-3 rounded border">
+                  <Input placeholder="Batch/Serial/IMEI" value={l.identifier} onChange={e => {const nl = [...lots]; nl[i].identifier = e.target.value; setLots(nl)}} />
+                  {formData.tracking_type === 'batch' && <Input type="date" placeholder="Expiry Date" value={l.expiry_date} onChange={e => {const nl = [...lots]; nl[i].expiry_date = e.target.value; setLots(nl)}} />}
+                  <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => setLots(lots.filter((_, idx) => idx !== i))}><Trash2 className="h-4 w-4"/></Button>
+                </div>
+              ))}
+           </CardContent></Card>
+        )}
+
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+
+        <Button type="submit" className="w-full bg-[#007AFF] hover:bg-[#005bb5]" disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Product
+        </Button>
       </form>
     </div>
   )

@@ -30,7 +30,7 @@ export default async function AdminBusinessesPage({
 
       {/* Filters and Search - Client-side navigation handled via forms or direct links */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row gap-4 items-end">
+        <form className="flex flex-col sm:flex-row gap-4 items-end" method="GET">
           <div className="flex-1 w-full">
             <label htmlFor="q" className="block text-xs font-medium text-gray-700 mb-1">Search</label>
             <div className="relative">

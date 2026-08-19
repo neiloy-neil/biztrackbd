@@ -36,11 +36,17 @@ function VoidTransactionButton({ transactionId, state }: { transactionId: string
   )
 }
 
+import { useInView } from 'react-intersection-observer'
+import { Loader2 } from 'lucide-react'
+
 export default function StatementPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [party, setParty] = useState<any>(null)
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
+  const { ref, inView } = useInView()
 
   useEffect(() => {
     async function load() {
@@ -54,11 +60,40 @@ export default function StatementPage({ params }: { params: { id: string } }) {
       ])
 
       if (partyRes.success) setParty(partyRes.data)
-      if (txnsRes.success) setTransactions(txnsRes.data as any[])
+      if (txnsRes.success) {
+        setTransactions(txnsRes.data as any[])
+        setHasMore((txnsRes.data as any[]).length === 50)
+      }
       setLoading(false)
     }
     load()
   }, [params])
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !party) return
+    setLoadingMore(true)
+    
+    const lastTxn = transactions[transactions.length - 1]
+    const resolved = await params
+    const txnsRes = await getPartyTransactions({ 
+      id: resolved.id, 
+      cursorDate: lastTxn?.transaction_date, 
+      cursorCreatedAt: lastTxn?.created_at, 
+      limit: 50 
+    })
+    
+    if (txnsRes.success && txnsRes.data) {
+      setTransactions(prev => [...prev, ...(txnsRes.data as any[])])
+      setHasMore((txnsRes.data as any[]).length === 50)
+    }
+    setLoadingMore(false)
+  }
+
+  useEffect(() => {
+    if (inView) {
+      loadMore()
+    }
+  }, [inView])
 
   if (loading) return <div className="p-8 text-center">লোড হচ্ছে...</div>
   if (!party) return <div className="p-8 text-center text-red-500">পার্টি পাওয়া যায়নি</div>
@@ -155,6 +190,16 @@ export default function StatementPage({ params }: { params: { id: string } }) {
             })}
           </tbody>
         </table>
+
+        {hasMore && (
+          <div ref={ref} className="text-center py-6 flex justify-center print:hidden">
+            {loadingMore ? (
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            ) : (
+              <span className="text-sm text-slate-400">Loading older transactions...</span>
+            )}
+          </div>
+        )}
         
         {/* Footer */}
         <div className="mt-16 text-center text-slate-500 text-sm print:fixed print:bottom-0 print:w-full">

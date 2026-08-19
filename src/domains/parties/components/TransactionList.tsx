@@ -6,30 +6,44 @@ import { Card } from '@/components/ui/card'
 import { format } from '@/lib/utils/date'
 import { TransactionAudit } from '@/domains/transactions/components/TransactionAudit'
 import { VoidTransactionButton } from '@/domains/transactions/components/VoidTransactionButton'
+import { useInView } from 'react-intersection-observer'
+import { Loader2 } from 'lucide-react'
 
 export function TransactionList({ initialTransactions, partyId, isCustomer }: { initialTransactions: any[], partyId: string, isCustomer: boolean }) {
-  const [page, setPage] = useState(1)
   const [transactions, setTransactions] = useState<any[]>(initialTransactions)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialTransactions.length === 50)
+  const { ref, inView } = useInView()
 
   useEffect(() => {
     setTransactions(initialTransactions)
-    setPage(1)
     setHasMore(initialTransactions.length === 50)
   }, [initialTransactions])
 
   const loadMore = async () => {
+    if (loading || !hasMore) return
     setLoading(true)
-    const nextPage = page + 1
-    const res = await getPartyTransactions({ id: partyId, page: nextPage, limit: 50 })
+    
+    const lastTxn = transactions[transactions.length - 1]
+    const res = await getPartyTransactions({ 
+      id: partyId, 
+      cursorDate: lastTxn?.transaction_date, 
+      cursorCreatedAt: lastTxn?.created_at, 
+      limit: 50 
+    })
+    
     if (res?.success && res.data) {
       setTransactions(prev => [...prev, ...res.data])
-      setPage(nextPage)
       setHasMore(res.data.length === 50)
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (inView) {
+      loadMore()
+    }
+  }, [inView])
 
   const formatCurrency = (amount: number) =>
     '৳' + Math.abs(isNaN(amount) ? 0 : amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })
@@ -80,14 +94,12 @@ export function TransactionList({ initialTransactions, partyId, isCustomer }: { 
         </div>
       </Card>
       {hasMore && (
-        <div className="text-center pt-4">
-          <button 
-            onClick={loadMore} 
-            disabled={loading}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium"
-          >
-            {loading ? 'লোড হচ্ছে...' : 'আরও লোড করুন (Load More)'}
-          </button>
+        <div ref={ref} className="text-center pt-6 flex justify-center">
+          {loading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          ) : (
+            <span className="text-sm text-slate-400">Loading more...</span>
+          )}
         </div>
       )}
     </div>

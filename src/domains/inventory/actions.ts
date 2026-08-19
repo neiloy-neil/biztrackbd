@@ -53,14 +53,13 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
 export const getProducts = authAction(async (data: { 
   search?: string, 
   lowStockOnly?: boolean,
-  page?: number,
+  cursorName?: string,
+  cursorId?: string,
   limit?: number
 }, ctx) => {
   const supabase = await createClient()
   
-  const page = data.page || 1
   const limit = data.limit || 50
-  const offset = (page - 1) * limit
 
   let query = supabase
     .from('products')
@@ -72,7 +71,12 @@ export const getProducts = authAction(async (data: {
     .eq('business_id', ctx.businessId)
     .is('deleted_at', null)
     .order('name')
-    .range(offset, offset + limit - 1)
+    .order('id')
+    .limit(limit)
+
+  if (data.cursorName && data.cursorId) {
+    query = query.or(`name.gt.${data.cursorName},and(name.eq.${data.cursorName},id.gt.${data.cursorId})`)
+  }
 
   if (data.search) {
     query = query.or(`name.ilike.%${data.search}%,sku.ilike.%${data.search}%,barcode.ilike.%${data.search}%`)

@@ -5,18 +5,20 @@ import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
 
-export const getParties = authAction(async (data: { type?: 'customer' | 'supplier' | 'both', search?: string, page?: number, limit?: number }, ctx) => {
+export const getParties = authAction(async (data: { type?: 'customer' | 'supplier' | 'both', search?: string, cursorDue?: number, cursorId?: string, limit?: number }, ctx) => {
   const supabase = await createClient()
 
-  const page = data.page || 1
   const limit = data.limit || 50
-  const offset = (page - 1) * limit
 
   let query = supabase
     .from('v_party_balances')
     .select('*')
     .eq('business_id', ctx.businessId)
-    .range(offset, offset + limit - 1)
+    .limit(limit)
+
+  if (data.cursorDue !== undefined && data.cursorId) {
+    query = query.or(`current_due.lt.${data.cursorDue},and(current_due.eq.${data.cursorDue},id.lt.${data.cursorId})`)
+  }
 
   if (data.type) {
     if (data.type === 'both') {
@@ -30,7 +32,7 @@ export const getParties = authAction(async (data: { type?: 'customer' | 'supplie
     query = query.ilike('name', `%${data.search}%`)
   }
 
-  const { data: parties, error } = await query.order('current_due', { ascending: false })
+  const { data: parties, error } = await query.order('current_due', { ascending: false }).order('id', { ascending: false })
 
   if (error) return { success: false, error: error.message }
   return { success: true, data: parties }
@@ -50,21 +52,25 @@ export const getParty = authAction(async (data: { id: string }, ctx) => {
   return { success: true, data: party }
 })
 
-export const getPartyTransactions = authAction(async (data: { id: string, page?: number, limit?: number }, ctx) => {
+export const getPartyTransactions = authAction(async (data: { id: string, cursorDate?: string, cursorCreatedAt?: string, limit?: number }, ctx) => {
   const supabase = await createClient()
 
-  const page = data.page || 1
   const limit = data.limit || 50
-  const offset = (page - 1) * limit
 
-  const { data: transactions, error } = await supabase
+  let query = supabase
     .from('transactions')
     .select('*')
     .eq('business_id', ctx.businessId)
     .eq('party_id', data.id)
     .order('transaction_date', { ascending: false })
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+    .limit(limit)
+
+  if (data.cursorDate && data.cursorCreatedAt) {
+    query = query.or(`transaction_date.lt.${data.cursorDate},and(transaction_date.eq.${data.cursorDate},created_at.lt.${data.cursorCreatedAt})`)
+  }
+
+  const { data: transactions, error } = await query
 
   if (error) return { success: false, error: error.message }
   return { success: true, data: transactions }

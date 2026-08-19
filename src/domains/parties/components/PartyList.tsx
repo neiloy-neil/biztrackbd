@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Phone, MessageCircle, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { getParties } from '@/domains/parties/actions'
+import { useInView } from 'react-intersection-observer'
+import { Loader2 } from 'lucide-react'
 
 interface Party {
   id: string
@@ -42,28 +44,35 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
     router.replace(`${pathname}?${params.toString()}`)
   }
 
-  const [page, setPage] = useState(1)
   const [parties, setParties] = useState<Party[]>(initialParties)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialParties.length === 50)
+  
+  const { ref, inView } = useInView()
 
   useEffect(() => {
     setParties(initialParties)
-    setPage(1)
     setHasMore(initialParties.length === 50)
   }, [initialParties])
 
   const loadMore = async () => {
+    if (loading || !hasMore) return
     setLoading(true)
-    const nextPage = page + 1
-    const res = await getParties({ type: currentType as any, search, page: nextPage, limit: 50 })
+    
+    const lastParty = parties[parties.length - 1]
+    const res = await getParties({ type: currentType as any, search, cursorDue: lastParty?.current_due, cursorId: lastParty?.id, limit: 50 })
     if (res?.success && res.data) {
       setParties(prev => [...prev, ...res.data])
-      setPage(nextPage)
       setHasMore(res.data.length === 50)
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (inView) {
+      loadMore()
+    }
+  }, [inView])
 
   const formatCurrency = (amount: number) => {
     const safe = isNaN(amount) ? 0 : Math.abs(amount)
@@ -126,14 +135,12 @@ export function PartyList({ initialParties, currentType }: { initialParties: any
       </div>
       
       {hasMore && (
-        <div className="text-center pt-4">
-          <button 
-            onClick={loadMore} 
-            disabled={loading}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm font-medium"
-          >
-            {loading ? 'লোড হচ্ছে...' : 'আরও লোড করুন (Load More)'}
-          </button>
+        <div ref={ref} className="text-center py-6 flex justify-center">
+          {loading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          ) : (
+            <span className="text-sm text-slate-400">Loading more...</span>
+          )}
         </div>
       )}
     </div>

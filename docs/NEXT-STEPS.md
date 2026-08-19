@@ -6,7 +6,7 @@ Below is the consolidated roadmap for the remaining critical phases, drawn from 
 
 ---
 
-## Sprint 9: Core Security Hardening (P0 - CRITICAL)
+## [DONE] Sprint 9: Core Security Hardening (P0 - CRITICAL)
 *These address existential threats to data privacy and subscription revenue.*
 
 - [ ] **1. Tenant Isolation Breakdown (IDOR):** 

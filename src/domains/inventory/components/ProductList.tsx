@@ -3,32 +3,40 @@
 import { useState, useEffect } from 'react'
 import { getProducts } from '@/domains/inventory/actions'
 import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
+import { useInView } from 'react-intersection-observer'
 
 export function ProductList({ initialProducts, search, lowStockOnly }: { initialProducts: any[], search?: string, lowStockOnly?: boolean }) {
-  const [page, setPage] = useState(1)
   const [products, setProducts] = useState<any[]>(initialProducts)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialProducts.length === 50 && !lowStockOnly)
 
+  const { ref, inView } = useInView()
+
   useEffect(() => {
     setProducts(initialProducts)
-    setPage(1)
     setHasMore(initialProducts.length === 50 && !lowStockOnly)
   }, [initialProducts, search, lowStockOnly])
 
   const loadMore = async () => {
+    if (loading || !hasMore) return
     setLoading(true)
-    const nextPage = page + 1
-    const res = await getProducts({ search, lowStockOnly, page: nextPage, limit: 50 })
+    
+    const lastProduct = products[products.length - 1]
+    const res = await getProducts({ search, lowStockOnly, cursorName: lastProduct?.name, cursorId: lastProduct?.id, limit: 50 })
     if (res?.success && res.data) {
       setProducts(prev => [...prev, ...res.data])
-      setPage(nextPage)
       setHasMore(res.data.length === 50)
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (inView) {
+      loadMore()
+    }
+  }, [inView])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(Math.abs(amount))
@@ -93,14 +101,12 @@ export function ProductList({ initialProducts, search, lowStockOnly }: { initial
       </table>
       
       {hasMore && (
-        <div className="text-center py-6 border-t border-slate-100 bg-slate-50">
-          <button 
-            onClick={loadMore} 
-            disabled={loading}
-            className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100 text-sm font-medium shadow-sm"
-          >
-            {loading ? 'লোড হচ্ছে...' : 'আরও লোড করুন (Load More)'}
-          </button>
+        <div ref={ref} className="text-center py-6 border-t border-slate-100 bg-slate-50 flex justify-center">
+          {loading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          ) : (
+            <span className="text-sm text-slate-400">Loading more...</span>
+          )}
         </div>
       )}
     </div>

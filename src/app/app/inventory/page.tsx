@@ -18,7 +18,7 @@ export default async function InventoryDashboardPage({
   const search = resolvedSearchParams.search
 
   const [productsRes, statsRes] = await Promise.all([
-    getProducts({ search, lowStockOnly: isLowStockOnly, limit: 50, page: 1 }),
+    getProducts({ search, lowStockOnly: isLowStockOnly, limit: 50 }),
     getInventoryStats()
   ])
   

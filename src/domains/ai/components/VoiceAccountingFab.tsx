@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Mic, MicOff, Check, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createTransaction } from '@/domains/transactions/actions'
+import { createTransaction, getAccounts } from '@/domains/transactions/actions'
 
 interface ParsedTransaction {
   type: 'sale' | 'expense' | 'payment_in' | 'payment_out'
@@ -97,9 +97,20 @@ export function VoiceAccountingFab() {
     
     try {
       setIsProcessing(true)
+      // Fetch default cash account
+      const accountsRes = await getAccounts()
+      let accountId = undefined
+      if (accountsRes.success && accountsRes.data) {
+        const cashAccount = accountsRes.data.find(a => a.type === 'cash')
+        if (cashAccount) {
+          accountId = cashAccount.id
+        }
+      }
+
       const res = await createTransaction({
         type: parsedTx.type,
         amount: parsedTx.amount,
+        account_id: accountId,
         new_party_name: parsedTx.party_name || undefined,
         notes: parsedTx.description,
         idempotencyKey: crypto.randomUUID()

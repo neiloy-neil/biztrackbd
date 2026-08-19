@@ -66,4 +66,4 @@ Below is the consolidated roadmap for the remaining critical phases, drawn from 
 - [x] **Phase 10:** Actionable Insights engine
 - [x] **Phase 11:** Smart Business Alerts (automated SMS/push)
 - [x] **Phase 12:** AI Business Assistant (chat-based insights)
-- [ ] **Phase 13:** Bangla Voice Accounting (speech-to-text POS)
+- [x] **Phase 13:** Bangla Voice Accounting (speech-to-text POS)

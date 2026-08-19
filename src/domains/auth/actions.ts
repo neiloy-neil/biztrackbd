@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/security/rate-limit'
+import { getPlatformSettingsCached } from '@/lib/settings'
 
 import { sendSms } from '@/lib/sms/sender'
 
@@ -62,9 +63,12 @@ async function getRedirectPath(userId: string): Promise<string> {
     .single()
     
   if (member) {
+    const settings = await getPlatformSettingsCached()
+    const businessSessionHours = settings?.security?.businessSessionDuration || 168 // 7 days
+
     cookieStore.set('active_business_id', member.business_id, {
       path: '/',
-      maxAge: 60 * 60 * 24 * 30 // 30 days
+      maxAge: 60 * 60 * businessSessionHours // dynamic hours
     })
     return `${appPrefix}/dashboard`
   }
@@ -125,7 +129,12 @@ export async function loginWithPin(phone: string, pin: string) {
 
 
 export async function sendOtp(phone: string) {
-  const isRateLimited = await rateLimit('sendOtp')
+  const settings = await getPlatformSettingsCached()
+  const maxOtpAttempts = settings?.auth_limits?.maxOtpAttempts || 5
+  const otpExpiryMinutes = settings?.auth_limits?.otpExpiryMinutes || 3
+  const platformName = settings?.general?.platformName || 'BizTrack BD'
+
+  const isRateLimited = await rateLimit('sendOtp', maxOtpAttempts)
   if (isRateLimited) return { success: false, error: 'Too many requests. Please wait a minute.' }
 
   const normalizedPhone = normalizePhone(phone)
@@ -134,14 +143,17 @@ export async function sendOtp(phone: string) {
   const adminClient = await createAdminClient()
   const { error: dbError } = await adminClient
     .from('phone_otps')
-    .insert({ phone: normalizedPhone, otp, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() })
+    .insert({ phone: normalizedPhone, otp, expires_at: new Date(Date.now() + otpExpiryMinutes * 60 * 1000).toISOString() })
 
   if (dbError) {
     console.error('OTP insert error:', dbError)
     return { success: false, error: 'Failed to generate OTP. Please try again.' }
   }
 
-  const msg = `আপনার BizTrack BD ওটিপি: ${otp}। ১০ মিনিটের মধ্যে ব্যবহার করুন।`
+  const bnDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯']
+  const bnExpiry = otpExpiryMinutes.toString().split('').map((d: string) => bnDigits[parseInt(d)] || d).join('')
+
+  const msg = `আপনার ${platformName} ওটিপি: ${otp}। ${bnExpiry} মিনিটের মধ্যে ব্যবহার করুন।`
   const smsResult = await sendSms(normalizedPhone, msg)
   if (!smsResult.success) {
     return { success: false, error: smsResult.error || 'Failed to send SMS' }

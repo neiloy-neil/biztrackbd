@@ -1,5 +1,5 @@
 import { createAdminAuthClient } from '@/domains/auth/admin-actions'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LayoutDashboard, Users, CreditCard, Settings, LogOut, Tag, Activity, HeadphonesIcon, Flag, Bell, Shield } from 'lucide-react'
@@ -9,8 +9,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const adminClient = await createAdminAuthClient()
-  const { data: { user }, error } = await adminClient.auth.getUser()
+  const authClient = await createAdminAuthClient()
+  const { data: { user }, error } = await authClient.auth.getUser()
   
   if (error || !user) {
     // Invalid or expired admin token
@@ -18,16 +18,15 @@ export default async function AdminLayout({
   }
 
   // We are safely authenticated as an admin on the PRIMARY Supabase project.
-  // We can use createClient() or adminClient (they hit the same DB) 
-  // to fetch data, but using createClient is standard for data fetching.
-  const supabase = await createClient()
+  const adminClient = await createAdminClient()
+  const { data: adminData } = await adminClient.from('platform_admins').select('role').eq('user_id', user.id).single()
 
-  const { count: unreadCount } = await supabase
+  const { count: unreadCount } = await adminClient
     .from('platform_notifications')
     .select('*', { count: 'estimated', head: true }) // PERF-02: estimated avoids full table scan
     .eq('is_read', false)
     
-  const { data: hasTeamPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.admins.manage' })
+  const hasTeamPermission = adminData?.role === 'super_admin'
 
   return (
     <div className="flex h-screen bg-gray-100">

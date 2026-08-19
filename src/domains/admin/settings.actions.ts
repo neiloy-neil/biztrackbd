@@ -1,7 +1,8 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { adminAction } from '@/lib/auth-wrappers'
+import { adminAction } from '@/lib/actions/safe-action'
+import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
 import { revalidatePath } from 'next/cache'
 
 export async function getPlatformSettings() {
@@ -24,7 +25,7 @@ export async function getPlatformSettings() {
   return settings
 }
 
-export const updatePlatformSetting = adminAction<FormData, any>('platform.settings.manage', async (formData, { user: admin }) => {
+export const updatePlatformSetting = adminAction<FormData, any>(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (formData, ctx) => {
     const key = formData.get('key') as string
     const valueStr = formData.get('value') as string
     
@@ -39,7 +40,41 @@ export const updatePlatformSetting = adminAction<FormData, any>('platform.settin
       return { success: false, error: 'Invalid JSON value' }
     }
     
-    const supabase = createAdminClient()
+    // Safe bounds validation
+    if (key === 'auth_limits') {
+      if (typeof value?.otpExpiryMinutes !== 'number' || value.otpExpiryMinutes < 1 || value.otpExpiryMinutes > 60) {
+        return { success: false, error: 'OTP expiry must be between 1 and 60 minutes' }
+      }
+      if (typeof value?.maxOtpAttempts !== 'number' || value.maxOtpAttempts < 1 || value.maxOtpAttempts > 100) {
+        return { success: false, error: 'Max OTP attempts must be between 1 and 100' }
+      }
+    }
+    
+    if (key === 'billing') {
+      if (typeof value?.defaultTrialDuration !== 'number' || value.defaultTrialDuration < 0 || value.defaultTrialDuration > 365) {
+        return { success: false, error: 'Trial duration must be between 0 and 365 days' }
+      }
+      if (typeof value?.renewalGracePeriod !== 'number' || value.renewalGracePeriod < 0 || value.renewalGracePeriod > 30) {
+        return { success: false, error: 'Grace period must be between 0 and 30 days' }
+      }
+    }
+
+    if (key === 'security') {
+      if (typeof value?.adminSessionDuration !== 'number' || value.adminSessionDuration < 1 || value.adminSessionDuration > 168) {
+        return { success: false, error: 'Admin session must be between 1 and 168 hours' }
+      }
+      if (typeof value?.businessSessionDuration !== 'number' || value.businessSessionDuration < 1 || value.businessSessionDuration > 720) {
+        return { success: false, error: 'Business session must be between 1 and 720 hours' }
+      }
+    }
+
+    if (key === 'general') {
+      if (typeof value?.platformName !== 'string' || value.platformName.length < 2 || value.platformName.length > 50) {
+        return { success: false, error: 'Platform name must be between 2 and 50 characters' }
+      }
+    }
+
+    const supabase = ctx.adminClient
     
     // Get old value for audit logging
     const { data: oldSetting } = await supabase
@@ -56,7 +91,7 @@ export const updatePlatformSetting = adminAction<FormData, any>('platform.settin
       .upsert({
         key,
         value,
-        updated_by: admin.id,
+        updated_by: ctx.userId,
         updated_at: new Date().toISOString()
       }, { onConflict: 'key' })
       
@@ -67,7 +102,7 @@ export const updatePlatformSetting = adminAction<FormData, any>('platform.settin
     
     // Audit log
     await supabase.rpc('log_admin_action', {
-      p_admin_id: admin.id,
+      p_admin_id: ctx.userId,
       p_action_type: 'UPDATE_SETTING',
       p_details: {
         key,
@@ -77,10 +112,10 @@ export const updatePlatformSetting = adminAction<FormData, any>('platform.settin
     })
     
     revalidatePath('/admin/settings')
-    return { success: true }
+    return { success: true, data: null }
   })
 
-export const getSystemEnvironmentStatus = adminAction<void, any>('platform.settings.manage', async () => {
+export const getSystemEnvironmentStatus = adminAction<void, any>(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (_params, ctx) => {
   // Returns status of environment variables without leaking secrets
   return {
     success: true,

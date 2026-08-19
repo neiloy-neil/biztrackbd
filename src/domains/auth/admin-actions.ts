@@ -9,7 +9,10 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export async function createAdminAuthClient() {
   const cookieStore = await cookies()
-  
+  const { getPlatformSettingsCached } = await import('@/lib/settings')
+  const settings = await getPlatformSettingsCached()
+  const adminSessionHours = settings?.security?.adminSessionDuration || 24
+
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       flowType: 'pkce',
@@ -30,7 +33,8 @@ export async function createAdminAuthClient() {
       },
     },
     cookieOptions: {
-      name: 'sb-admin-auth-token'
+      name: 'sb-admin-auth-token',
+      maxAge: adminSessionHours * 60 * 60
     }
   })
 }

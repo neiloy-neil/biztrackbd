@@ -1,7 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { adminAction } from '@/lib/actions/safe-action'
+import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
+
 import { logPlatformAction } from '@/lib/security/audit'
 import { revalidatePath } from 'next/cache'
 
@@ -96,30 +98,20 @@ export async function replyToTicket(ticketId: string, message: string, attachmen
 
   revalidatePath(`/app/support/${ticketId}`)
   revalidatePath(`/admin/support/${ticketId}`)
+  return { success: true, data: null }
 }
 
 // ==========================================
 // ADMIN ACTIONS
 // ==========================================
 
-async function getAdminSupabase() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
 
-  const { data: adminData } = await supabase.from('platform_admins').select('role').eq('user_id', user.id).single()
-  if (!adminData) throw new Error('Unauthorized')
 
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+export const updateTicketStatus = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (params: { ticketId: string, status: string }, ctx: any) => {
+  const { ticketId, status } = params
+  const adminSupabase = ctx.adminClient
 
-export async function updateTicketStatus(ticketId: string, status: string) {
-  const adminSupabase = await getAdminSupabase()
-
-  const { error } = await adminSupabase.from('support_tickets').update({ status, updated_at: new Date().toISOString() }).eq('id', ticketId)
+  const { error } = await ctx.adminClient.from('support_tickets').update({ status, updated_at: new Date().toISOString() }).eq('id', ticketId)
   if (error) throw new Error(error.message)
 
   await logPlatformAction({
@@ -132,12 +124,14 @@ export async function updateTicketStatus(ticketId: string, status: string) {
   revalidatePath(`/admin/support/${ticketId}`)
   revalidatePath(`/admin/support`)
   revalidatePath(`/app/support/${ticketId}`)
-}
+  return { success: true, data: null }
+})
 
-export async function assignTicket(ticketId: string, assigneeId: string | null) {
-  const adminSupabase = await getAdminSupabase()
+export const assignTicket = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (params: { ticketId: string, assigneeId: string | null }, ctx: any) => {
+  const { ticketId, assigneeId } = params
+  const adminSupabase = ctx.adminClient
 
-  const { error } = await adminSupabase.from('support_tickets').update({ assigned_to: assigneeId, updated_at: new Date().toISOString() }).eq('id', ticketId)
+  const { error } = await ctx.adminClient.from('support_tickets').update({ assigned_to: assigneeId, updated_at: new Date().toISOString() }).eq('id', ticketId)
   if (error) throw new Error(error.message)
 
   await logPlatformAction({
@@ -148,17 +142,12 @@ export async function assignTicket(ticketId: string, assigneeId: string | null) 
   })
 
   revalidatePath(`/admin/support/${ticketId}`)
-}
+  return { success: true, data: null }
+})
 
-export async function resolveTicket(ticketId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: hasPermission } = await supabase.rpc('has_platform_permission', { required_permission: 'platform.support.manage' })
-  if (!hasPermission) throw new Error('Unauthorized')
-
-  const { error } = await supabase
+export const resolveTicket = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (params: { ticketId: string }, ctx: any) => {
+  const { ticketId } = params
+  const { error } = await ctx.adminClient
     .from('support_tickets')
     .update({ status: 'Resolved' })
     .eq('id', ticketId)
@@ -167,7 +156,8 @@ export async function resolveTicket(ticketId: string) {
 
   revalidatePath(`/admin/support/${ticketId}`)
   revalidatePath('/admin/support')
-}
+  return { success: true, data: null }
+})
 
 export async function getSupportAttachmentUrl(path: string) {
   const supabase = await createClient()
@@ -189,16 +179,11 @@ export async function getSupportAttachmentUrl(path: string) {
   return data.signedUrl
 }
 
-export async function adminReplyToTicket(ticketId: string, message: string, isInternalNote: boolean, attachmentUrl?: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  
-  const adminSupabase = await getAdminSupabase()
-
-  const { error } = await adminSupabase.from('support_ticket_messages').insert({
+export const adminReplyToTicket = adminAction(PLATFORM_PERMISSIONS.SUPPORT_MANAGE, async (params: { ticketId: string, message: string, isInternalNote: boolean, attachmentUrl?: string }, ctx: any) => {
+  const { ticketId, message, isInternalNote, attachmentUrl } = params
+  const { error } = await ctx.adminClient.from('support_ticket_messages').insert({
     ticket_id: ticketId,
-    sender_id: user.id,
+    sender_id: ctx.userId,
     message,
     attachment_url: attachmentUrl || null,
     is_internal_note: isInternalNote
@@ -214,11 +199,12 @@ export async function adminReplyToTicket(ticketId: string, message: string, isIn
     })
   } else {
     // Also update ticket status to "Waiting for customer" automatically if replying publicly
-    await adminSupabase.from('support_tickets').update({ status: 'Waiting for customer', updated_at: new Date().toISOString() }).eq('id', ticketId)
+    await ctx.adminClient.from('support_tickets').update({ status: 'Waiting for customer', updated_at: new Date().toISOString() }).eq('id', ticketId)
   }
 
   revalidatePath(`/admin/support/${ticketId}`)
   if (!isInternalNote) {
     revalidatePath(`/app/support/${ticketId}`)
   }
-}
+  return { success: true, data: null }
+})

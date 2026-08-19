@@ -12,7 +12,7 @@ const MAX_REQUESTS = 200 // Increased for development
  * Basic rate limiter for Next.js Server Actions
  * Returns true if the request should be blocked.
  */
-export async function rateLimit(actionName: string): Promise<boolean> {
+export async function rateLimit(actionName: string, maxRequestsOverride?: number): Promise<boolean> {
   const headersList = await headers()
   // Try to get IP from standard proxy headers, fallback to a global bucket if undefined
   const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown-ip'
@@ -27,7 +27,8 @@ export async function rateLimit(actionName: string): Promise<boolean> {
     return false
   }
   
-  if (record.count >= MAX_REQUESTS) {
+  const limit = maxRequestsOverride ?? MAX_REQUESTS
+  if (record.count >= limit) {
     return true // Blocked
   }
   

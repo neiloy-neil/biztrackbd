@@ -40,7 +40,7 @@ export default function AdminTicketReplyForm({ ticketId }: { ticketId: string })
         attachmentUrl = filePath
       }
 
-      await adminReplyToTicket(ticketId, message, isInternal, attachmentUrl || undefined)
+      await adminReplyToTicket({ ticketId, message, isInternalNote: isInternal, attachmentUrl: attachmentUrl || undefined })
       setMessage('')
       setFile(null)
     } catch (err: any) {

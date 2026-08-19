@@ -147,21 +147,21 @@ function GeneralSettings({ data = {} }: { data: any }) {
           <Input id="platformName" name="platformName" defaultValue={data.platformName} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="supportEmail">Support Email</Label>
-          <Input id="supportEmail" name="supportEmail" defaultValue={data.supportEmail} />
+          <Label htmlFor="supportEmail">Support Email (Coming Soon)</Label>
+          <Input id="supportEmail" name="supportEmail" disabled defaultValue={data.supportEmail} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="supportPhone">Support Phone</Label>
-          <Input id="supportPhone" name="supportPhone" defaultValue={data.supportPhone} />
+          <Label htmlFor="supportPhone">Support Phone (Coming Soon)</Label>
+          <Input id="supportPhone" name="supportPhone" disabled defaultValue={data.supportPhone} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="defaultCurrency">Default Currency</Label>
-            <Input id="defaultCurrency" name="defaultCurrency" defaultValue={data.defaultCurrency} />
+            <Label htmlFor="defaultCurrency">Default Currency (Coming Soon)</Label>
+            <Input id="defaultCurrency" name="defaultCurrency" disabled defaultValue={data.defaultCurrency} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="defaultTimezone">Default Timezone</Label>
-            <Input id="defaultTimezone" name="defaultTimezone" defaultValue={data.defaultTimezone} />
+            <Label htmlFor="defaultTimezone">Default Timezone (Coming Soon)</Label>
+            <Input id="defaultTimezone" name="defaultTimezone" disabled defaultValue={data.defaultTimezone} />
           </div>
         </div>
       </div>
@@ -231,10 +231,11 @@ function SecuritySettings({ data = {} }: { data: any }) {
           <Input id="businessSessionDuration" name="businessSessionDuration" type="number" defaultValue={data.businessSessionDuration} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="mfaEnforced">Enforce MFA globally</Label>
+          <Label htmlFor="mfaEnforced">Enforce MFA globally (Coming Soon)</Label>
           <select 
             id="mfaEnforced" 
             name="mfaEnforced" 
+            disabled 
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             defaultValue={data.mfaEnforced ? 'true' : 'false'}
           >

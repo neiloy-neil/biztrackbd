@@ -28,10 +28,10 @@ export default function AdminSupportControls({
     setLoading(true)
     try {
       if (status !== currentStatus) {
-        await updateTicketStatus(ticketId, status)
+        await updateTicketStatus({ ticketId, status })
       }
       if (assignee !== (currentAssignee || '')) {
-        await assignTicket(ticketId, assignee || null)
+        await assignTicket({ ticketId, assigneeId: assignee || null })
       }
       router.refresh()
     } catch (err) {

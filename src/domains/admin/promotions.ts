@@ -3,6 +3,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logPlatformAction } from '@/lib/security/audit'
 import { adminAction } from '@/lib/actions/safe-action'
+import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
 
 // Helper to get a service role client inside an admin action
 // adminAction already verifies platform admin status securely
@@ -13,8 +14,8 @@ function getAdminSupabase() {
   )
 }
 
-export const getCoupons = adminAction(async (_params: void) => {
-  const adminSupabase = getAdminSupabase()
+export const getCoupons = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (_params: void, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { data, error } = await adminSupabase
     .from('coupons')
@@ -28,7 +29,7 @@ export const getCoupons = adminAction(async (_params: void) => {
   return { success: true, data }
 })
 
-export const createCoupon = adminAction(async (params: { 
+export const createCoupon = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { 
   code: string, 
   type: string, 
   value: number, 
@@ -38,8 +39,8 @@ export const createCoupon = adminAction(async (params: {
   eligibility: string, 
   max_redemptions: number | null, 
   expires_at: string | null 
-}, ctx) => {
-  const adminSupabase = getAdminSupabase()
+}, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('coupons').insert({
     code: params.code.toUpperCase(),
@@ -68,8 +69,8 @@ export const createCoupon = adminAction(async (params: {
   return { success: true, data: null }
 })
 
-export const toggleCouponActive = adminAction(async (params: { couponId: string, isActive: boolean }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const toggleCouponActive = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { couponId: string, isActive: boolean }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('coupons').update({ is_active: params.isActive }).eq('id', params.couponId)
   if (error) return { success: false, error: error.message }
@@ -83,8 +84,8 @@ export const toggleCouponActive = adminAction(async (params: { couponId: string,
   return { success: true, data: null }
 })
 
-export const extendTrial = adminAction(async (params: { businessId: string, days: number }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const extendTrial = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { businessId: string, days: number }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { data, error } = await adminSupabase.rpc('extend_trial', { p_business_id: params.businessId, p_days: params.days })
   if (error) return { success: false, error: error.message }
@@ -99,8 +100,8 @@ export const extendTrial = adminAction(async (params: { businessId: string, days
   return { success: true, data }
 })
 
-export const grantPromotionalCredit = adminAction(async (params: { businessId: string, amount: number, reason: string }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const grantPromotionalCredit = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { businessId: string, amount: number, reason: string }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('promotional_credits').insert({
     business_id: params.businessId,

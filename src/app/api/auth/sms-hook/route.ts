@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { sendSms } from '@/lib/sms/sender'
+import { getPlatformSettingsCached } from '@/lib/settings'
 
 export async function POST(req: Request) {
   try {
@@ -22,8 +23,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing phone or OTP in payload' }, { status: 400 })
     }
 
+    const settings = await getPlatformSettingsCached()
+    const platformName = settings?.general?.platformName || 'BizTrack BD'
+    
     // Prepare message
-    const msg = `আপনার BizTrack BD ওটিপি (OTP) কোড হল: ${otp}। কোডটি কারো সাথে শেয়ার করবেন না।`
+    const msg = `আপনার ${platformName} ওটিপি (OTP) কোড হল: ${otp}। কোডটি কারো সাথে শেয়ার করবেন না।`
     
     // Send SMS via sms.net.bd
     const smsResult = await sendSms(phone, msg)

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSms } from '@/lib/sms/sender'
+import { getPlatformSettingsCached } from '@/lib/settings'
 
 // Runs daily via Vercel Cron
 export async function GET(request: Request) {
@@ -53,7 +54,9 @@ export async function GET(request: Request) {
       
       const phone = userRecord?.user?.user_metadata?.phone
       if (phone) {
-        const message = `Alert: Your BizTrack BD subscription for ${business.name} expires in 3 days. Please renew to avoid service interruption.`
+        const settings = await getPlatformSettingsCached()
+        const platformName = settings?.general?.platformName || 'BizTrack BD'
+        const message = `Alert: Your ${platformName} subscription for ${business.name} expires in 3 days. Please renew to avoid service interruption.`
         const result = await sendSms(phone, message, sub.business_id)
         if (result.success) {
           smsSentCount++

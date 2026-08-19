@@ -202,13 +202,19 @@ export function requirePermission<TInput, TOutput>(
   }
 }
 
+import { PlatformPermission, hasPlatformPermission } from '@/lib/auth/admin-rbac'
+import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { SupabaseClient } from '@supabase/supabase-js'
+
 /**
- * Enforces the user is a Platform Admin before executing the action.
+ * Enforces the user is a Platform Admin and has the required permission before executing the action.
  * Usage:
- * export const myAdminAction = adminAction(async (data, ctx) => { ... })
+ * export const myAdminAction = adminAction(PLATFORM_PERMISSIONS.USERS_VIEW, async (data, ctx) => { ... })
  */
 export function adminAction<TInput, TOutput>(
-  action: (data: TInput, ctx: { userId: string }) => Promise<ActionResponse<TOutput>>
+  permission: PlatformPermission,
+  action: (data: TInput, ctx: { userId: string, adminClient: SupabaseClient }) => Promise<ActionResponse<TOutput>>
 ) {
   return async (data: TInput): Promise<ActionResponse<TOutput>> => {
     const isRateLimited = await rateLimit('adminAction')
@@ -216,43 +222,56 @@ export function adminAction<TInput, TOutput>(
       return { success: false, error: 'Rate limit exceeded. Please try again later.' }
     }
 
-    const supabase = await createClient()
+    const authClient = await createAdminAuthClient()
+    const adminClient = await createAdminClient()
 
-    // 1. Validate Session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // 1. Validate Session using the Admin Auth Client
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
     if (authError || !user) {
-      return { success: false, error: 'Unauthorized: No active session' }
+      return { success: false, error: 'Unauthorized: No active admin session' }
     }
 
-    // 2. Validate Platform Admin Status
-    const { data: adminData, error: adminError } = await supabase
+    // 2. Validate Platform Admin Status and Role
+    const { data: adminData, error: adminError } = await adminClient
       .from('platform_admins')
-      .select('id')
+      .select('id, role')
       .eq('user_id', user.id)
       .single()
 
     if (adminError || !adminData) {
-      // Audit log the failed authorization attempt
       await auditLog({
         action: 'unauthorized_platform_admin_access_attempt',
         entity_type: 'platform',
         entity_id: user.id,
         business_id: 'PLATFORM',
         user_id: user.id,
-        new_data: { 
-          request_type: 'admin_server_action',
-          payload: data
-        }
+        new_data: { request_type: 'admin_server_action', payload: data }
       })
       return { success: false, error: 'Forbidden: You do not have platform admin access' }
     }
 
-    // 3. Execute the actual action with the secure context
+    // 3. Validate Platform Permission
+    if (!hasPlatformPermission(adminData.role, permission)) {
+      await auditLog({
+        action: 'unauthorized_platform_permission_attempt',
+        entity_type: 'platform',
+        entity_id: user.id,
+        business_id: 'PLATFORM',
+        user_id: user.id,
+        new_data: { request_type: 'admin_server_action', permission_required: permission }
+      })
+      return { success: false, error: 'Forbidden: You lack the required platform permission' }
+    }
+
+    // 4. Execute the actual action with the secure context (passing the service_role client)
     try {
-      const result = await action(data, { userId: user.id })
+      const result = await action(data, { userId: user.id, adminClient })
       return result
     } catch (e: any) {
-      console.error('Server Action Error:', e)
+      logger.error('Admin Server Action Error', e, {
+        userId: user.id,
+        action: action.name || 'anonymous_admin_action'
+      })
       return { success: false, error: 'Internal Server Error' }
     }
   }

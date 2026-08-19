@@ -1,13 +1,12 @@
 'use server'
 
-import { adminAction } from '@/lib/auth-wrappers'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminAuthClient } from '@/domains/auth/admin-actions'
+import { adminAction } from '@/lib/actions/safe-action'
+import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
 import { revalidatePath } from 'next/cache'
 import { logPlatformAction } from '@/lib/security/audit'
 
-export const fetchPlatformAdminsAction = adminAction('platform.admins.manage', async () => {
-  const supabase = await createClient()
+export const fetchPlatformAdminsAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (_params: any, ctx: any) => {
+  const supabase = ctx.adminClient
   
   const { data, error } = await supabase.rpc('get_platform_admins_list')
   if (error) {
@@ -18,9 +17,9 @@ export const fetchPlatformAdminsAction = adminAction('platform.admins.manage', a
   return { success: true, data }
 })
 
-export const invitePlatformAdminAction = adminAction('platform.admins.manage', async (params: { email: string, roleName: string }) => {
-  const supabase = await createClient()
-  const adminAuthClient = await createAdminAuthClient()
+export const invitePlatformAdminAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { email: string, roleName: string }, ctx: any) => {
+  const supabase = ctx.adminClient
+  const adminAuthClient = ctx.adminClient
   
   // 1. Invite user or get existing user
   const { data: inviteData, error: inviteError } = await adminAuthClient.auth.admin.inviteUserByEmail(params.email)
@@ -34,7 +33,7 @@ export const invitePlatformAdminAction = adminAction('platform.admins.manage', a
       const { data: usersData, error: usersError } = await adminAuthClient.auth.admin.listUsers()
       if (usersError) return { success: false, error: 'Failed to look up existing user' }
       
-      const existingUser = usersData.users.find(u => u.email === params.email)
+      const existingUser = usersData.users.find((u: any) => u.email === params.email)
       if (!existingUser) return { success: false, error: 'User already exists but could not be resolved' }
       
       userId = existingUser.id
@@ -65,8 +64,8 @@ export const invitePlatformAdminAction = adminAction('platform.admins.manage', a
   return { success: true, data: { userId } }
 })
 
-export const updatePlatformAdminRoleAction = adminAction('platform.admins.manage', async (params: { userId: string, roleName: string }) => {
-  const supabase = await createClient()
+export const updatePlatformAdminRoleAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { userId: string, roleName: string }, ctx: any) => {
+  const supabase = ctx.adminClient
 
   const { error } = await supabase.rpc('assign_platform_admin_role', {
     p_user_id: params.userId,
@@ -83,11 +82,11 @@ export const updatePlatformAdminRoleAction = adminAction('platform.admins.manage
   })
 
   revalidatePath('/admin/team')
-  return { success: true }
+  return { success: true, data: null }
 })
 
-export const removePlatformAdminAction = adminAction('platform.admins.manage', async (params: { userId: string }) => {
-  const supabase = await createClient()
+export const removePlatformAdminAction = adminAction(PLATFORM_PERMISSIONS.ADMINS_MANAGE, async (params: { userId: string }, ctx: any) => {
+  const supabase = ctx.adminClient
 
   const { error } = await supabase.rpc('remove_platform_admin', {
     p_user_id: params.userId
@@ -103,5 +102,5 @@ export const removePlatformAdminAction = adminAction('platform.admins.manage', a
   })
 
   revalidatePath('/admin/team')
-  return { success: true }
+  return { success: true, data: null }
 })

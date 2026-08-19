@@ -9,6 +9,9 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
   const now = new Date().toISOString()
+  
+  const { getPlatformSettingsCached } = await import('@/lib/settings')
+  const settings = await getPlatformSettingsCached()
 
   try {
     const results = {
@@ -78,7 +81,7 @@ export async function GET(request: Request) {
             subscription_id:      sub.id,
             amount_due:           amountToBill,
             status:               'open',
-            due_date:             new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+            due_date:             new Date(Date.now() + (settings?.billing?.renewalGracePeriod || 3) * 24 * 60 * 60 * 1000).toISOString(),
             billing_period_start: newPeriodStart.toISOString(),
             billing_period_end:   newPeriodEnd.toISOString(),
           })
@@ -106,7 +109,7 @@ export async function GET(request: Request) {
     // Open invoices whose due_date passed 3 days ago.
     // Querying invoices (not period_end) so it works correctly after
     // step 1 has already advanced current_period_end.
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const threeDaysAgo = new Date(Date.now() - (settings?.billing?.renewalGracePeriod || 3) * 24 * 60 * 60 * 1000).toISOString()
 
     const { data: overdueInvoices } = await supabase
       .from('invoices')

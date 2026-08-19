@@ -100,6 +100,11 @@ export class BillingService {
     if (existingSub) {
       subscriptionId = existingSub.id
     } else {
+      const { getPlatformSettingsCached } = await import('@/lib/settings')
+      const settings = await getPlatformSettingsCached()
+      const trialDays = settings?.billing?.defaultTrialDuration || 14
+      const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+
       const { data: newSub, error: subError } = await supabase
         .from('subscriptions')
         .insert({
@@ -108,7 +113,7 @@ export class BillingService {
           billing_cycle: session.billing_cycle,
           status: 'trialing',
           current_period_start: new Date().toISOString(),
-          current_period_end: new Date().toISOString()
+          current_period_end: trialEnd
         })
         .select()
         .single()

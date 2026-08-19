@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logPlatformAction } from '@/lib/security/audit'
 import { revalidatePath } from 'next/cache'
 import { adminAction } from '@/lib/actions/safe-action'
+import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
 
 // Helper to get a service role client inside an admin action
 // adminAction already verifies platform admin status securely
@@ -14,8 +15,8 @@ function getAdminSupabase() {
   )
 }
 
-export const createFeatureFlag = adminAction(async (params: { id: string, description: string, isGlobalEnabled: boolean }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const createFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { id: string, description: string, isGlobalEnabled: boolean }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('feature_flags').insert({
     id: params.id,
@@ -36,8 +37,8 @@ export const createFeatureFlag = adminAction(async (params: { id: string, descri
   return { success: true, data: null }
 })
 
-export const toggleGlobalFeatureFlag = adminAction(async (params: { id: string, isGlobalEnabled: boolean }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const toggleGlobalFeatureFlag = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { id: string, isGlobalEnabled: boolean }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('feature_flags')
     .update({ is_global_enabled: params.isGlobalEnabled, updated_at: new Date().toISOString() })
@@ -57,8 +58,8 @@ export const toggleGlobalFeatureFlag = adminAction(async (params: { id: string, 
   return { success: true, data: null }
 })
 
-export const setFlagPlanEntitlement = adminAction(async (params: { flagId: string, planId: string, enabled: boolean }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const setFlagPlanEntitlement = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { flagId: string, planId: string, enabled: boolean }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   if (params.enabled) {
     const { error } = await adminSupabase.from('feature_flag_plans').insert({ flag_id: params.flagId, plan_id: params.planId })
@@ -79,8 +80,8 @@ export const setFlagPlanEntitlement = adminAction(async (params: { flagId: strin
   return { success: true, data: null }
 })
 
-export const addFlagOverride = adminAction(async (params: { flagId: string, targetType: 'business' | 'user', targetId: string, isEnabled: boolean }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const addFlagOverride = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { flagId: string, targetType: 'business' | 'user', targetId: string, isEnabled: boolean }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('feature_flag_overrides').upsert({
     flag_id: params.flagId,
@@ -103,8 +104,8 @@ export const addFlagOverride = adminAction(async (params: { flagId: string, targ
   return { success: true, data: null }
 })
 
-export const removeFlagOverride = adminAction(async (params: { overrideId: string, flagId: string }, ctx) => {
-  const adminSupabase = getAdminSupabase()
+export const removeFlagOverride = adminAction(PLATFORM_PERMISSIONS.SETTINGS_MANAGE, async (params: { overrideId: string, flagId: string }, ctx: any) => {
+  const adminSupabase = ctx.adminClient
 
   const { error } = await adminSupabase.from('feature_flag_overrides').delete().eq('id', params.overrideId)
   if (error) return { success: false, error: error.message }

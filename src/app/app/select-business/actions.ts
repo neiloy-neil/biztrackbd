@@ -26,10 +26,14 @@ export async function setActiveBusinessAction(businessId: string) {
 
   const status = (member.businesses as any).status
   
+  const { getPlatformSettingsCached } = await import('@/lib/settings')
+  const settings = await getPlatformSettingsCached()
+  const businessSessionHours = settings?.security?.businessSessionDuration || 168
+
   const cookieStore = await cookies()
   cookieStore.set('active_business_id', businessId, {
     path: '/',
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: businessSessionHours * 60 * 60,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'

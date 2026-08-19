@@ -391,8 +391,8 @@ export default function POSClient({
           <ShoppingCart className="w-5 h-5" />
           <h2 className="font-bold text-lg">বর্তমান বিক্রয়</h2>
           <span className="ml-auto bg-white/20 px-2 py-0.5 rounded text-sm mr-2">{cart.length} পণ্য</span>
-          <button onClick={() => setShowMobileCart(false)} className="md:hidden p-1 hover:bg-white/10 rounded">
-            <ArrowLeft className="w-5 h-5" />
+          <button onClick={() => setShowMobileCart(false)} className="md:hidden w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded">
+            <ArrowLeft className="w-6 h-6" />
           </button>
         </div>
 
@@ -422,10 +422,10 @@ export default function POSClient({
                   <div className="font-bold text-slate-900">৳{item.subtotal}</div>
                 </div>
                 <div className="flex flex-col gap-1 ml-1">
-                  <button onClick={() => setEditingItem(item)} className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                  <button onClick={() => setEditingItem(item)} className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
                     <Edit2 className="w-5 h-5" />
                   </button>
-                  <button onClick={() => removeFromCart(item.product.id)} className="w-11 h-11 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
+                  <button onClick={() => removeFromCart(item.product.id)} className="w-12 h-12 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>

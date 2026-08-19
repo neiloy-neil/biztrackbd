@@ -221,17 +221,19 @@ export const createStaffAccount = requirePermission(PERMISSIONS.STAFF_MANAGE, au
   const email = deriveEmail(cleanPhone)
   const adminClient = await createAdminClient()
 
-  // Create the Supabase auth user
+  // Create the Supabase auth user — set phone so get_staff_list can display it
   const { data: authUser, error: authErr } = await adminClient.auth.admin.createUser({
     email,
+    phone: cleanPhone,
     password: data.pin,
     email_confirm: true,
+    phone_confirm: true,
     user_metadata: { full_name: data.name.trim(), phone: cleanPhone },
   })
 
   if (authErr) {
     if (authErr.message.includes('already registered') || (authErr as { code?: string }).code === 'user_already_exists') {
-      return { success: false, error: 'এই ফোন নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে। পুরনো ফ্লো দিয়ে যোগ করুন।' }
+      return { success: false, error: 'এই ফোন নম্বরে ইতিমধ্যে অ্যাকাউন্ট আছে।' }
     }
     return { success: false, error: authErr.message }
   }
@@ -246,18 +248,27 @@ export const createStaffAccount = requirePermission(PERMISSIONS.STAFF_MANAGE, au
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' })
 
-  // Add to business
-  const supabase = await createClient()
-  const { data: result, error: staffErr } = await supabase.rpc('add_staff_by_phone', {
-    p_business_id: ctx.businessId,
-    p_phone: cleanPhone,
-    p_role: data.role,
-  })
+  // Check not already a member, then insert directly — bypass add_staff_by_phone
+  // which requires auth.users.phone match (incompatible with email-based creation)
+  const { data: existing } = await adminClient
+    .from('business_members')
+    .select('role')
+    .eq('business_id', ctx.businessId)
+    .eq('user_id', userId)
+    .maybeSingle()
 
-  if (staffErr || !result?.success) {
-    // Roll back the auth user we just created to avoid orphaned accounts
+  if (existing) {
     await adminClient.auth.admin.deleteUser(userId)
-    return { success: false, error: staffErr?.message || result?.error || 'স্টাফ যোগ করা যায়নি' }
+    return { success: false, error: 'এই ইউজার ইতিমধ্যে এই ব্যবসার সদস্য।' }
+  }
+
+  const { error: memberErr } = await adminClient
+    .from('business_members')
+    .insert({ business_id: ctx.businessId, user_id: userId, role: data.role })
+
+  if (memberErr) {
+    await adminClient.auth.admin.deleteUser(userId)
+    return { success: false, error: memberErr.message }
   }
 
   revalidatePath('/app/settings/staff')

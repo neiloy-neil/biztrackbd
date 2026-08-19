@@ -17,3 +17,21 @@ export const getInsightsData = authAction(async (data: void, ctx) => {
 
   return { success: true, data: insightsData }
 })
+
+export const getBusinessHealthScore = authAction(
+  async (params: { startDate: string; endDate: string }, ctx) => {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.rpc('get_business_health_score', {
+      p_business_id: ctx.businessId,
+      p_start_date: params.startDate,
+      p_end_date: params.endDate,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true, data }
+  }
+)

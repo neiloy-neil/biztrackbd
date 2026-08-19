@@ -6,13 +6,105 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, TrendingDown, TrendingUp, Package, Users, Activity, BellRing } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export function InsightsDashboard({ insights }: { insights: any }) {
+export function InsightsDashboard({ insights, healthScore }: { insights: any, healthScore?: any }) {
   const router = useRouter()
 
   const { low_stock, top_debtors, expense_spikes, top_selling } = insights
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="space-y-6">
+      {/* 0. Business Health Score Hero */}
+      {healthScore && (
+        <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+            <Activity className="w-48 h-48 text-indigo-900" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl text-indigo-900 flex items-center gap-2">
+              <Activity className="h-6 w-6 text-indigo-600" />
+              Business Health Score
+            </CardTitle>
+            <CardDescription className="text-indigo-700/70">
+              A comprehensive score based on your cash flow, receivables, and profitability this month.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-center gap-8 py-4">
+              {/* Score Circle */}
+              <div className="relative flex items-center justify-center">
+                <svg className="w-32 h-32 transform -rotate-90">
+                  <circle
+                    className="text-indigo-100"
+                    strokeWidth="8"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="58"
+                    cx="64"
+                    cy="64"
+                  />
+                  <circle
+                    className={`transition-all duration-1000 ease-out ${
+                      healthScore.total_score >= 80 ? 'text-emerald-500' :
+                      healthScore.total_score >= 50 ? 'text-amber-500' : 'text-rose-500'
+                    }`}
+                    strokeWidth="8"
+                    strokeDasharray={364}
+                    strokeDashoffset={364 - (364 * healthScore.total_score) / 100}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="transparent"
+                    r="58"
+                    cx="64"
+                    cy="64"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center text-center">
+                  <span className="text-4xl font-bold text-slate-900">{healthScore.total_score}</span>
+                  <span className="text-xs text-slate-500 font-medium">/ 100</span>
+                </div>
+              </div>
+
+              {/* Breakdown */}
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                <div className="bg-white/60 p-4 rounded-xl border border-indigo-50/50">
+                  <div className="text-sm font-medium text-slate-500 mb-1">Cash Flow</div>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold text-slate-900">{healthScore.cash_flow.score}</span>
+                    <span className="text-sm text-slate-400 mb-1">/ {healthScore.cash_flow.max}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    Net: ৳{Number(healthScore.cash_flow.net).toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="bg-white/60 p-4 rounded-xl border border-indigo-50/50">
+                  <div className="text-sm font-medium text-slate-500 mb-1">Receivables</div>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold text-slate-900">{healthScore.receivables.score}</span>
+                    <span className="text-sm text-slate-400 mb-1">/ {healthScore.receivables.max}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    Due: ৳{Number(healthScore.receivables.due).toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="bg-white/60 p-4 rounded-xl border border-indigo-50/50">
+                  <div className="text-sm font-medium text-slate-500 mb-1">Profitability</div>
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-bold text-slate-900">{healthScore.profitability.score}</span>
+                    <span className="text-sm text-slate-400 mb-1">/ {healthScore.profitability.max}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    Margin: {(Number(healthScore.profitability.margin) * 100).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
       {/* 1. Low Stock Alerts */}
       <Card className="border-amber-200 bg-amber-50/30">
         <CardHeader className="pb-3">
@@ -142,6 +234,7 @@ export function InsightsDashboard({ insights }: { insights: any }) {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

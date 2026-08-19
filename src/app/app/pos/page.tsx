@@ -45,13 +45,21 @@ export default async function POSPage() {
     .eq('type', 'customer')
     .is('deleted_at', null)
 
+  // Fetch Branches
+  const { data: branches } = await supabase
+    .from('branches')
+    .select('id, name')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: true })
+
   return (
     <div className="h-screen w-full bg-slate-100 flex overflow-hidden">
       <Suspense fallback={<div className="flex items-center justify-center h-full w-full">Loading POS...</div>}>
-        <POSClient 
+        <POSClient
           initialProducts={products || []}
           accounts={accounts || []}
           customers={customers || []}
+          branches={branches || []}
           businessName={business?.name || 'BizTrack BD'}
           businessPhone={business?.phone || ''}
           businessAddress={[business?.address, business?.district].filter(Boolean).join(', ')}

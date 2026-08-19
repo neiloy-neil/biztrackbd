@@ -393,7 +393,7 @@ export class BillingService {
    * Processes an incoming webhook from the payment provider.
    * Updates the invoice status, and provisions/extends the subscription.
    */
-  async processPaymentWebhook(transactionId: string, metadata: Record<string, string>) {
+  async processPaymentWebhook(transactionId: string, metadata: any, webhookSecret?: string) {
     const supabase = createAdminClient()
     
     // 1. Verify payment validity directly with provider
@@ -438,7 +438,8 @@ export class BillingService {
       p_uddoktapay_invoice_id: transactionId,
       p_status: 'COMPLETED',
       p_amount: verification.amount,
-      p_idempotency_key: transactionId
+      p_idempotency_key: transactionId,
+      p_webhook_secret: webhookSecret || null
     })
 
     if (rpcError) {

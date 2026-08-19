@@ -237,3 +237,28 @@ export const createTransfer = idempotentAction(async (data: {
   
   return { success: true, data: { id: transactionId } }
 })
+
+export const voidTransactionAction = authAction(async (data: {
+  transactionId: string
+  reason: string
+}, ctx) => {
+  if (!canDeleteSales(ctx.role) && !canDeleteExpenses(ctx.role)) {
+    return { success: false, error: 'Permission Denied: Requires delete privileges' }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('void_transaction', {
+    p_transaction_id: data.transactionId,
+    p_reason: data.reason
+  })
+
+  if (error) {
+    console.error('Failed to void transaction:', error)
+    return { success: false, error: 'Failed to void transaction: ' + error.message }
+  }
+
+  revalidatePath('/app', 'layout')
+  
+  return { success: true, data: null }
+})

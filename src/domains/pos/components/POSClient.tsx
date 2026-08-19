@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 type Product = any
 type Account = any
 type Customer = any
+type Branch = { id: string; name: string }
 
 type CartItem = {
   product: Product
@@ -34,6 +35,7 @@ export default function POSClient({
   initialProducts,
   accounts,
   customers,
+  branches,
   businessName = 'BizTrack BD',
   businessPhone = '',
   businessAddress = '',
@@ -41,6 +43,7 @@ export default function POSClient({
   initialProducts: Product[]
   accounts: Account[]
   customers: Customer[]
+  branches: Branch[]
   businessName?: string
   businessPhone?: string
   businessAddress?: string
@@ -54,6 +57,7 @@ export default function POSClient({
   const [lastTxnId, setLastTxnId] = useState('')
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [editingItem, setEditingItem] = useState<CartItem | null>(null)
+  const [selectedBranchId, setSelectedBranchId] = useState(branches[0]?.id || '')
 
   // Checkout state
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
@@ -155,6 +159,7 @@ export default function POSClient({
 
     const idempotencyKey = crypto.randomUUID()
     const payload: any = {
+      branch_id: selectedBranchId || undefined,
       party_id: selectedCustomerId || undefined,
       new_party_name: showNewCustomer && newCustomerName ? newCustomerName : undefined,
       new_party_phone: showNewCustomer && newCustomerPhone ? newCustomerPhone : undefined,
@@ -201,6 +206,7 @@ export default function POSClient({
     setDiscount(0)
     setSearch('')
     setSelectedCustomerId('')
+    setSelectedBranchId(branches[0]?.id || '')
     setPaymentMode('')
     setPaymentAmount('')
     setShowNewCustomer(false)
@@ -239,6 +245,9 @@ export default function POSClient({
         <div className="hidden print:block w-[80mm] p-4 bg-white text-black font-mono text-sm absolute top-0 left-0">
           <div className="text-center mb-4">
             <h1 className="text-xl font-bold">{businessName}</h1>
+            {branches.length > 1 && selectedBranchId && (
+              <p className="font-semibold">{branches.find(b => b.id === selectedBranchId)?.name}</p>
+            )}
             {businessPhone && <p>{businessPhone}</p>}
             {businessAddress && <p>{businessAddress}</p>}
             <p className="mt-1">Invoice: #{lastTxnId.split('-')[0]}</p>
@@ -279,6 +288,17 @@ export default function POSClient({
           <Link href="/dashboard">
             <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
           </Link>
+          {branches.length > 1 && (
+            <select
+              value={selectedBranchId}
+              onChange={e => setSelectedBranchId(e.target.value)}
+              className="h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#007AFF] shrink-0 max-w-[160px]"
+            >
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <Input

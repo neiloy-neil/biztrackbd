@@ -24,6 +24,7 @@ export const processPOSSale = idempotentAction(async (data: {
   notes?: string
   items: POSCartItem[]
   payments: POSPayment[]
+  branch_id?: string
 }, ctx) => {
   if (!canCreateSales(ctx.role)) {
     return { success: false, error: 'Permission Denied: Requires sales.create' }
@@ -35,15 +36,30 @@ export const processPOSSale = idempotentAction(async (data: {
 
   const supabase = await createClient()
 
-  // Resolve branch
-  const { data: branch } = await supabase
-    .from('branches')
-    .select('id')
-    .eq('business_id', ctx.businessId)
-    .limit(1)
-    .single()
+  // Resolve branch — use the client-selected branch if provided, otherwise
+  // fall back to the first branch (single-branch businesses / offline replays).
+  let branchId = data.branch_id || null
+  if (!branchId) {
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('id')
+      .eq('business_id', ctx.businessId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    branchId = branch?.id ?? null
+  } else {
+    // Verify the provided branch belongs to this business (IDOR guard).
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('id')
+      .eq('id', branchId)
+      .eq('business_id', ctx.businessId)
+      .maybeSingle()
+    if (!branch) return { success: false, error: 'Branch not found.' }
+  }
 
-  if (!branch) {
+  if (!branchId) {
     return { success: false, error: 'Branch not found.' }
   }
 
@@ -94,7 +110,7 @@ export const processPOSSale = idempotentAction(async (data: {
 
   const { data: transactionId, error } = await supabase.rpc('process_pos_sale', {
     p_business_id:  ctx.businessId,
-    p_branch_id:    branch.id,
+    p_branch_id:    branchId,
     p_party_id:     partyId,
     p_total_amount: totalAmount,
     p_subtotal:     subtotal,

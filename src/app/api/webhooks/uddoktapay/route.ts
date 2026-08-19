@@ -39,7 +39,8 @@ export async function POST(req: Request) {
   try {
     const { BillingService } = await import('@/domains/billing/service')
     const billingService = new BillingService()
-    const result = await billingService.processPaymentWebhook(invoice_id, metadata)
+    const webhookSecret = process.env.WEBHOOK_SECRET
+    const result = await billingService.processPaymentWebhook(invoice_id, metadata, webhookSecret)
 
     if (!result.success) {
       console.error('Webhook processing failed:', result.reason)

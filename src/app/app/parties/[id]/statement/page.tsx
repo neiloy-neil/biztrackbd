@@ -3,9 +3,38 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getParty, getPartyTransactions } from '@/domains/parties/actions'
+import { voidTransactionAction } from '@/domains/transactions/actions'
 import { Button } from '@/components/ui/button'
 import { Printer, ArrowLeft } from 'lucide-react'
 import { format } from '@/lib/utils/date'
+
+function VoidTransactionButton({ transactionId, state }: { transactionId: string, state: string }) {
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  if (state === 'voided') {
+    return <span className="text-red-500 font-semibold text-xs">Voided</span>
+  }
+
+  const handleVoid = async () => {
+    if (!confirm('Are you sure you want to void this transaction? This action is irreversible.')) return
+    setLoading(true)
+    const res = await voidTransactionAction({ transactionId, reason: 'User requested void via statement' })
+    setLoading(false)
+    if (res.success) {
+      alert('Transaction voided successfully')
+      router.refresh()
+    } else {
+      alert(res.error)
+    }
+  }
+
+  return (
+    <Button variant="destructive" size="xs" onClick={handleVoid} disabled={loading} className="print:hidden">
+      {loading ? 'Voiding...' : 'Void'}
+    </Button>
+  )
+}
 
 export default function StatementPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -88,6 +117,7 @@ export default function StatementPage({ params }: { params: { id: string } }) {
               <th className="py-3 px-2">বিবরণ</th>
               <th className="py-3 px-2 text-right">ডেবিট (Debit)</th>
               <th className="py-3 px-2 text-right">ক্রেডিট (Credit)</th>
+              <th className="py-3 px-2 text-right print:hidden">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -117,6 +147,9 @@ export default function StatementPage({ params }: { params: { id: string } }) {
                   </td>
                   <td className="py-3 px-2 text-right">{debit > 0 ? formatCurrency(debit) : '-'}</td>
                   <td className="py-3 px-2 text-right">{credit > 0 ? formatCurrency(credit) : '-'}</td>
+                  <td className="py-3 px-2 text-right print:hidden">
+                    <VoidTransactionButton transactionId={txn.id} state={txn.state} />
+                  </td>
                 </tr>
               )
             })}

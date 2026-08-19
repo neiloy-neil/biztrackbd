@@ -61,7 +61,7 @@ export const getAccountsWithBalance = authAction(async (data: void, ctx) => {
   const supabase = await createClient()
   const { data: accounts, error } = await supabase
     .from('accounts')
-    .select('id, name, type, current_balance')
+    .select('id, name, type, subtype, current_balance, account_number, account_phone, bank_name')
     .eq('business_id', ctx.businessId)
     .is('deleted_at', null)
     .order('type')
@@ -71,7 +71,14 @@ export const getAccountsWithBalance = authAction(async (data: void, ctx) => {
 })
 
 export const createAccount = authAction(async (
-  data: { name: string; type: string },
+  data: {
+    name: string
+    type: string
+    subtype?: string
+    account_number?: string
+    account_phone?: string
+    bank_name?: string
+  },
   ctx
 ) => {
   const supabase = await createClient()
@@ -79,6 +86,10 @@ export const createAccount = authAction(async (
     business_id: ctx.businessId,
     name: data.name.trim(),
     type: data.type,
+    subtype: data.subtype || null,
+    account_number: data.account_number?.trim() || null,
+    account_phone: data.account_phone?.trim() || null,
+    bank_name: data.bank_name?.trim() || null,
   })
   if (error) return { success: false, error: error.message }
   revalidatePath('/app/settings')
@@ -86,13 +97,27 @@ export const createAccount = authAction(async (
 })
 
 export const updateAccount = authAction(async (
-  data: { id: string; name: string },
+  data: {
+    id: string
+    name: string
+    subtype?: string
+    account_number?: string
+    account_phone?: string
+    bank_name?: string
+  },
   ctx
 ) => {
   const supabase = await createClient()
   const { error } = await supabase
     .from('accounts')
-    .update({ name: data.name.trim(), updated_at: new Date().toISOString() })
+    .update({
+      name: data.name.trim(),
+      subtype: data.subtype || null,
+      account_number: data.account_number?.trim() || null,
+      account_phone: data.account_phone?.trim() || null,
+      bank_name: data.bank_name?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', data.id)
     .eq('business_id', ctx.businessId)
   if (error) return { success: false, error: error.message }
@@ -303,3 +328,28 @@ export const deleteBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authA
   revalidatePath('/app/settings')
   return { success: true, data: null }
 }))
+
+// ── Branch Staff Assignment ────────────────────────────────────────────────────
+
+export const getStaffWithBranchId = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  const { data: staff, error } = await supabase
+    .rpc('get_staff_with_branches', { p_business_id: ctx.businessId })
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: staff }
+})
+
+export const assignStaffToBranch = requirePermission(
+  PERMISSIONS.STAFF_MANAGE,
+  authAction(async (data: { staffId: string; branchId: string | null }, ctx) => {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .from('business_members')
+      .update({ branch_id: data.branchId })
+      .eq('user_id', data.staffId)
+      .eq('business_id', ctx.businessId)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/app/settings')
+    return { success: true, data: null }
+  })
+)

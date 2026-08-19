@@ -23,14 +23,16 @@ Below is the consolidated roadmap for the remaining critical phases, drawn from 
 
 ---
 
-## Sprint 10: Performance & Scalability (P1 - HIGH)
-*These prevent database crashes and timeout errors under production load.*
+### 🟢 Sprint 10: Performance & Scalability (P1) [DONE]
+**Goal:** Address system performance under production load before adding new modules.
 
-- [ ] **1. Missing Foreign Key Indexes:** 
-  - Create B-Tree indexes for all foreign keys (`business_id`, `branch_id`, `category_id`, etc.). The schema currently omits them, causing Sequential Full Table Scans.
-- [ ] **2. Dashboard O(N) Degradation:** 
-  - Replace exact `COUNT(*)` queries on the dashboard with `.limit(1)` existence checks or Materialized Views to prevent full table scans on every visit.
-- [ ] **3. Hardcoded Data Limits (Pagination):** 
+- [x] **1. Missing Foreign Key Indexes:**
+  - Create B-Tree indexes for all `business_id` and `branch_id` columns across all tables.
+  - Create indexes for heavily filtered columns (`category_id`, `type`).
+- [x] **2. Dashboard O(N) Degradation:**
+  - Update `get_dashboard_summary` RPC.
+  - Replace `COUNT(*)` with `.limit(1)` existence checks or materialized views for low-stock counts to prevent full table scans.
+- [x] **3. Hardcoded Data Limits (Pagination):**
   - Remove `.limit(50)` hardcodes in server actions. 
   - Implement cursor-based pagination and infinite scrolling for Transactions, Inventory, and Customers.
 

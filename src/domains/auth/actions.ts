@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/security/rate-limit'
 
-const SMS_API_KEY = process.env.SMS_NET_BD_API_KEY
-const SMS_ENDPOINT = 'https://api.sms.net.bd/sendsms'
+import { sendSms } from '@/lib/sms/sender'
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -123,33 +122,7 @@ export async function loginWithPin(phone: string, pin: string) {
   return { success: true, redirectTo }
 }
 
-async function sendSms(phone: string, otp: string): Promise<{ success: boolean; error?: string }> {
-  if (!SMS_API_KEY) {
-    console.log(`[DEV MODE] OTP for ${phone}: ${otp}`)
-    return { success: true }
-  }
 
-  const msg = `আপনার BizTrack BD ওটিপি: ${otp}। ১০ মিনিটের মধ্যে ব্যবহার করুন।`
-  const formData = new URLSearchParams()
-  formData.append('api_key', SMS_API_KEY)
-  formData.append('msg', msg)
-  formData.append('to', phone)
-
-  try {
-    const response = await fetch(SMS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
-    })
-    const data = await response.json()
-    if (data.error !== 0) {
-      return { success: false, error: data.msg || 'SMS sending failed' }
-    }
-    return { success: true }
-  } catch (e: any) {
-    return { success: false, error: e.message }
-  }
-}
 
 export async function sendOtp(phone: string) {
   const isRateLimited = await rateLimit('sendOtp')
@@ -168,7 +141,8 @@ export async function sendOtp(phone: string) {
     return { success: false, error: 'Failed to generate OTP. Please try again.' }
   }
 
-  const smsResult = await sendSms(normalizedPhone, otp)
+  const msg = `আপনার BizTrack BD ওটিপি: ${otp}। ১০ মিনিটের মধ্যে ব্যবহার করুন।`
+  const smsResult = await sendSms(normalizedPhone, msg)
   if (!smsResult.success) {
     return { success: false, error: smsResult.error || 'Failed to send SMS' }
   }

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const SMS_API_KEY = process.env.SMS_NET_BD_API_KEY
-const SMS_ENDPOINT = 'https://api.sms.net.bd/sendsms'
+import { sendSms } from '@/lib/sms/sender'
 
 export async function POST(req: Request) {
   try {
@@ -23,39 +22,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing phone or OTP in payload' }, { status: 400 })
     }
 
-    if (!SMS_API_KEY) {
-      console.error('SMS_NET_BD_API_KEY is not set in environment variables.')
-      return NextResponse.json({ error: 'SMS configuration missing' }, { status: 500 })
-    }
-
     // Prepare message
     const msg = `আপনার BizTrack BD ওটিপি (OTP) কোড হল: ${otp}। কোডটি কারো সাথে শেয়ার করবেন না।`
     
     // Send SMS via sms.net.bd
-    // The API requires URL encoding for the msg parameter if sent via GET, 
-    // but the docs specify we can use POST with form data.
-    const formData = new URLSearchParams()
-    formData.append('api_key', SMS_API_KEY)
-    formData.append('msg', msg)
-    formData.append('to', phone)
+    const smsResult = await sendSms(phone, msg)
 
-    const response = await fetch(SMS_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString()
-    })
-
-    const responseData = await response.json()
-
-    if (responseData.error !== 0) {
-      console.error('SMS Gateway Error:', responseData)
-      return NextResponse.json({ error: responseData.msg }, { status: 500 })
+    if (!smsResult.success) {
+      console.error('SMS Gateway Error:', smsResult.error)
+      return NextResponse.json({ error: smsResult.error }, { status: 500 })
     }
 
     // Supabase Auth expects a successful HTTP response to proceed
-    return NextResponse.json({ success: true, data: responseData })
+    return NextResponse.json({ success: true })
 
   } catch (error) {
     console.error('Failed to process SMS hook:', error)

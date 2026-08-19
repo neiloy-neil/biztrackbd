@@ -44,17 +44,17 @@ Below is the consolidated roadmap for the remaining critical phases, drawn from 
 
 ---
 
-## Sprint 12: UX & Operations Polish (P2 - MEDIUM)
+## [DONE] Sprint 12: UX & Operations Polish (P2 - MEDIUM)
 *These fix "fat-finger" errors and give admins better visibility.*
 
-- [ ] **1. Mobile Responsiveness:**
+- [x] **1. Mobile Responsiveness:**
   - Fix Android keyboard pushing the bottom navigation bar up over input forms.
   - Add vertical scrolling to the POS Checkout Dialog so the "Pay" button isn't pushed off-screen.
   - Enlarge POS touch targets to at least 48x48px.
-- [ ] **2. Notification System Rebuild:**
+- [x] **2. Notification System Rebuild:**
   - Build real PostgreSQL triggers for low stock and subscription expiry.
   - Fix read-status to use a proper tenant-specific join table instead of shared global state.
-- [ ] **3. Audit Logs:**
+- [x] **3. Audit Logs:**
   - Add logging for Super Admin impersonation events and sensitive read operations.
 
 ---
@@ -62,8 +62,8 @@ Below is the consolidated roadmap for the remaining critical phases, drawn from 
 ## Future Feature Roadmap (Post-Launch)
 *Advanced features to build competitive moats.*
 
-- [ ] **Phase 9:** Business Health Score dashboard
-- [ ] **Phase 10:** Actionable Insights engine
+- [x] **Phase 9:** Business Health Score dashboard
+- [x] **Phase 10:** Actionable Insights engine
 - [ ] **Phase 11:** Smart Business Alerts (automated SMS/push)
 - [ ] **Phase 12:** AI Business Assistant (chat-based insights)
 - [ ] **Phase 13:** Bangla Voice Accounting (speech-to-text POS)

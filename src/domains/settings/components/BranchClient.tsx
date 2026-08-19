@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogTitle,
   DialogClose,
@@ -107,10 +106,14 @@ function AssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-slate-300 text-xs text-slate-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-slate-300 text-xs text-slate-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+      >
         <UserPlus className="h-3 w-3" />
         কর্মী যোগ করুন
-      </DialogTrigger>
+      </button>
       <DialogContent className="max-w-sm">
           <DialogTitle className="text-base font-semibold text-slate-800 mb-3">কর্মী অ্যাসাইন করুন</DialogTitle>
           {candidates.length === 0 ? (

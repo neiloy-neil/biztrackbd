@@ -415,22 +415,46 @@ export const deleteBranch = requirePermission(PERMISSIONS.SETTINGS_MANAGE, authA
 
 export const getStaffWithBranchId = authAction(async (data: void, ctx) => {
   const supabase = await createClient()
-  const { data: staff, error } = await supabase
-    .rpc('get_staff_with_branches', { p_business_id: ctx.businessId })
-  if (error) return { success: false, error: error.message }
-  return { success: true, data: staff }
+  const adminClient = await createAdminClient()
+
+  // get_staff_list reads auth.users metadata (correct source of truth for names/phones)
+  const [staffRes, branchRes] = await Promise.all([
+    supabase.rpc('get_staff_list', { p_business_id: ctx.businessId }),
+    adminClient
+      .from('business_members')
+      .select('user_id, branch_id')
+      .eq('business_id', ctx.businessId),
+  ])
+
+  if (staffRes.error) return { success: false, error: staffRes.error.message }
+
+  const branchMap = Object.fromEntries(
+    (branchRes.data ?? []).map(m => [m.user_id, m.branch_id ?? null])
+  )
+
+  const result = (staffRes.data ?? []).map((s: { user_id: string; full_name: string; phone: string; role: string }) => ({
+    user_id: s.user_id,
+    full_name: s.full_name,
+    phone: s.phone,
+    role: s.role,
+    branch_id: branchMap[s.user_id] ?? null,
+  }))
+
+  return { success: true, data: result }
 })
 
 export const assignStaffToBranch = requirePermission(
   PERMISSIONS.STAFF_MANAGE,
   authAction(async (data: { staffId: string; branchId: string | null }, ctx) => {
-    const supabase = await createClient()
-    const { error } = await supabase
+    const adminClient = await createAdminClient()
+    const { error, count } = await adminClient
       .from('business_members')
       .update({ branch_id: data.branchId })
       .eq('user_id', data.staffId)
       .eq('business_id', ctx.businessId)
+      .select('user_id', { count: 'exact', head: true })
     if (error) return { success: false, error: error.message }
+    if (count === 0) return { success: false, error: 'কর্মী পাওয়া যায়নি।' }
     revalidatePath('/app/settings')
     return { success: true, data: null }
   })

@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 import { VoiceAccountingFab } from "@/domains/ai/components/VoiceAccountingFab";
+import { AssistantWidget } from "@/domains/ai/components/AssistantWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,6 +79,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 
             {/* AI Voice FAB */}
             <VoiceAccountingFab />
+
+            {/* AI Assistant Widget */}
+            <AssistantWidget />
             
             {/* Notifications */}
             <Toaster position="top-center" richColors />

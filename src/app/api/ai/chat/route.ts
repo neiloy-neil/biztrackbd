@@ -32,15 +32,23 @@ export async function POST(req: Request) {
 
     // Fetch live context in parallel (3s timeout — don't block the stream)
     const timeout = <T>(p: Promise<T>) => Promise.race([p, new Promise<{ data: null }>((r) => setTimeout(() => r({ data: null }), 3000)) as Promise<any>])
-    const [{ data: summary }, { data: insights }] = await Promise.all([
+    const [{ data: summary }, { data: insights }, { data: transactions }] = await Promise.all([
       timeout(Promise.resolve(supabase.rpc('get_dashboard_summary', { p_business_id: businessId }))),
       timeout(Promise.resolve(supabase.rpc('get_actionable_insights', { p_business_id: businessId }))),
+      timeout(Promise.resolve(supabase
+        .from('transactions')
+        .select('type, total_amount, description, created_at, parties(name)')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      ))
     ])
 
     // Construct the System Prompt with the live data
     const topDebtors = (insights?.top_debtors || []) as Array<{ name: string; phone?: string; current_due: number }>
     const lowStock = (insights?.low_stock || []) as Array<{ name: string; current_stock: number; min_stock: number }>
     const topSelling = (insights?.top_selling || []) as Array<{ name: string; total_sold: number }>
+    const recentTransactions = (transactions || []) as Array<{ type: string; total_amount: number; description: string; created_at: string; parties: { name: string } | null }>
 
     const systemPrompt = `
 You are the AI Business Assistant for "${businessName}", built into the BizTrack BD app.
@@ -67,6 +75,9 @@ ${lowStock.length > 0 ? lowStock.map(p => `- ${p.name}: ${p.current_stock} remai
 
 Top Selling Products (last 30 days):
 ${topSelling.length > 0 ? topSelling.map(p => `- ${p.name}: ${p.total_sold} sold`).join('\n') : 'কোনো ডেটা নেই'}
+
+Recent Transactions (last 5):
+${recentTransactions.length > 0 ? recentTransactions.map(t => `- [${new Date(t.created_at).toLocaleDateString()}] ${t.type.toUpperCase()}: ৳${t.total_amount} ${t.parties?.name ? `with ${t.parties.name}` : ''} ${t.description ? `(${t.description})` : ''}`).join('\n') : 'কোনো লেনদেন নেই'}
 ---
 
 Answer questions using only the data above. Do NOT hallucinate numbers. If something is not in the data, say so clearly.

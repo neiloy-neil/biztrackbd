@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send, Sparkles, User } from 'lucide-react'
 
-export function AiAssistant() {
+export function AiAssistant({ inWidget }: { inWidget?: boolean } = {}) {
   const [input, setInput] = useState('')
   const { messages, sendMessage, status } = useChat({
     transport: new TextStreamChatTransport({ api: '/api/ai/chat' }),
@@ -35,7 +35,11 @@ export function AiAssistant() {
   }, [messages])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[600px] max-w-2xl mx-auto w-full border rounded-2xl bg-white shadow-sm overflow-hidden">
+    <div className={`flex flex-col mx-auto w-full border bg-white overflow-hidden ${
+      inWidget 
+        ? 'h-full border-0' 
+        : 'h-[calc(100vh-140px)] md:h-[600px] max-w-2xl rounded-2xl shadow-sm'
+    }`}>
       {/* Header */}
       <div className="p-4 border-b bg-emerald-50/50 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">

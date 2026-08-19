@@ -124,7 +124,7 @@ export function VoiceAccountingFab() {
       <button
         onClick={isListening ? stopListening : startListening}
         disabled={isProcessing && !isListening}
-        className={`fixed bottom-20 right-6 md:bottom-8 md:right-8 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all z-40
+        className={`fixed bottom-[140px] right-6 md:bottom-28 md:right-8 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all z-40
           ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'} 
           ${isProcessing && !isListening ? 'opacity-50 cursor-not-allowed' : ''}
         `}

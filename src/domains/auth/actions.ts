@@ -27,6 +27,8 @@ async function getRedirectPath(userId: string): Promise<string> {
   const referer = headersList.get('referer') || ''
   const host = headersList.get('host') || ''
   
+  const isVercel = host.includes('vercel.app')
+  
   // Check if we are on pure localhost without subdomains
   const isLocalhost = host.includes('localhost') && !host.includes('app.localhost') && !host.includes('admin.localhost')
 
@@ -45,7 +47,7 @@ async function getRedirectPath(userId: string): Promise<string> {
   }
 
   // Not an admin, or Admin logging in via normal app portal -> go to app
-  const appPrefix = isLocalhost ? '/app' : ''
+  const appPrefix = (isLocalhost || isVercel) ? '/app' : ''
   
   const { cookies } = await import('next/headers')
   const cookieStore = await cookies()

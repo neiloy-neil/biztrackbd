@@ -1,13 +1,13 @@
 'use server'
 
-import { createAuthClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { SteadfastClient } from '@/lib/couriers/steadfast'
 import { PathaoClient } from '@/lib/couriers/pathao'
 
 export async function getIntegrationSettingsAction(businessId: string) {
-  const supabase = await createAuthClient()
+  const supabase = await createClient()
 
   // The RLS policy should ensure only owners can select
   const { data, error } = await supabase
@@ -28,7 +28,7 @@ export async function saveIntegrationSettings(payload: {
   apiSecret?: string,
   storeId?: string
 }) {
-  const supabase = await createAuthClient()
+  const supabase = await createClient()
   const cookieStore = await cookies()
   const businessId = cookieStore.get('active_business_id')?.value
 
@@ -60,7 +60,7 @@ export async function saveIntegrationSettings(payload: {
 }
 
 export async function toggleIntegrationAction(businessId: string, provider: 'pathao' | 'steadfast', isActive: boolean) {
-  const supabase = await createAuthClient()
+  const supabase = await createClient()
   
   const { error } = await supabase
     .from('business_integrations')
@@ -77,7 +77,7 @@ export async function toggleIntegrationAction(businessId: string, provider: 'pat
 }
 
 export async function createConsignment(transactionId: string, provider: 'pathao' | 'steadfast' | string) {
-  const supabase = await createAuthClient()
+  const supabase = await createClient()
 
   // Fetch the transaction & shipment details
   const { data: transaction, error: txError } = await supabase
@@ -115,14 +115,16 @@ export async function createConsignment(transactionId: string, provider: 'pathao
   let consignmentId = ''
   let trackingLink = ''
 
+  const party: any = Array.isArray(transaction.parties) ? transaction.parties[0] : transaction.parties;
+
   try {
     if (provider === 'steadfast') {
       const client = new SteadfastClient(integrations.api_key, integrations.api_secret || '')
       const result = await client.createOrder({
         invoice: transaction.id.substring(0, 8), // just a short ID for demo
-        recipient_name: transaction.parties?.name || 'Guest',
-        recipient_phone: transaction.parties?.phone || '01700000000',
-        recipient_address: transaction.parties?.address || 'Dhaka',
+        recipient_name: party?.name || 'Guest',
+        recipient_phone: party?.phone || '01700000000',
+        recipient_address: party?.address || 'Dhaka',
         cod_amount: transaction.grand_total
       })
       
@@ -133,9 +135,9 @@ export async function createConsignment(transactionId: string, provider: 'pathao
       const result = await client.createOrder({
         store_id: integrations.store_id || '1',
         merchant_order_id: transaction.id.substring(0, 8),
-        recipient_name: transaction.parties?.name || 'Guest',
-        recipient_phone: transaction.parties?.phone || '01700000000',
-        recipient_address: transaction.parties?.address || 'Dhaka',
+        recipient_name: party?.name || 'Guest',
+        recipient_phone: party?.phone || '01700000000',
+        recipient_address: party?.address || 'Dhaka',
         recipient_city: '1', // Dhaka city ID
         recipient_zone: '1', // Zone ID
         delivery_type: 48,
@@ -174,15 +176,17 @@ export async function createConsignment(transactionId: string, provider: 'pathao
   }
 }
 
+
 export async function syncShipmentStatus(transactionId: string) {
-  const supabase = await createAuthClient()
+  const supabase = await createClient()
 
   // Fetch the shipment
   const { data: transaction, error: txError } = await supabase
     .from('transactions')
-    .select(      id, business_id, status,
+    .select(`
+      id, business_id, status,
       shipments ( id, courier_consignment_id )
-    \)
+    `)
     .eq('id', transactionId)
     .single()
 
@@ -195,8 +199,6 @@ export async function syncShipmentStatus(transactionId: string) {
     return { error: 'No courier consignment found' }
   }
 
-  // Find active integration (assuming steadfast for now since it's most common, ideally we store provider on shipment)
-  // To keep it robust, let's just query Steadfast for now as an MVP
   const { data: integrations } = await supabase
     .from('business_integrations')
     .select('*')

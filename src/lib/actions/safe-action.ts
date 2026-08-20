@@ -223,7 +223,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
  */
 export function adminAction<TInput, TOutput>(
   permission: PlatformPermission,
-  action: (data: TInput, ctx: { userId: string, adminClient: SupabaseClient }) => Promise<ActionResponse<TOutput>>
+  action: (data: TInput, ctx: { userId: string, adminClient: SupabaseClient, authClient: SupabaseClient }) => Promise<ActionResponse<TOutput>>
 ) {
   return async (data: TInput): Promise<ActionResponse<TOutput>> => {
     const isRateLimited = await rateLimit('adminAction')
@@ -272,9 +272,11 @@ export function adminAction<TInput, TOutput>(
       return { success: false, error: 'Forbidden: You lack the required platform permission' }
     }
 
-    // 4. Execute the actual action with the secure context (passing the service_role client)
+    // 4. Execute the actual action with the secure context
+    // authClient carries the user's JWT so auth.uid() works in SECURITY DEFINER RPCs.
+    // adminClient (service-role) is for direct table operations that bypass RLS.
     try {
-      const result = await action(data, { userId: user.id, adminClient })
+      const result = await action(data, { userId: user.id, adminClient, authClient })
       return result
     } catch (e: any) {
       logger.error('Admin Server Action Error', e, {

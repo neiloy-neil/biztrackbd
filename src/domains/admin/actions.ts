@@ -7,28 +7,26 @@ import { PLATFORM_PERMISSIONS } from '@/lib/auth/admin-rbac'
 import { createPlatformNotification } from './notifications'
 
 export const getPlatformMetrics = adminAction(PLATFORM_PERMISSIONS.DASHBOARD_VIEW, async (_params: void, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { data, error } = await supabase.rpc('get_platform_metrics_summary')
+  // Use authClient so auth.uid() resolves inside the SECURITY DEFINER RPC
+  const { data, error } = await ctx.authClient.rpc('get_platform_metrics_summary')
   if (error) return { success: false, error: error.message }
-  
-  await logSensitiveRead(supabase, 'system', 'all', 'viewed_platform_metrics')
-  
+
+  await logSensitiveRead(ctx.authClient, 'system', 'all', 'viewed_platform_metrics')
+
   return { success: true, data }
 })
 
 export const getPlatformGrowth = adminAction(PLATFORM_PERMISSIONS.DASHBOARD_VIEW, async (_params: void, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { data, error } = await supabase.rpc('get_platform_growth_data')
+  const { data, error } = await ctx.authClient.rpc('get_platform_growth_data')
   if (error) return { success: false, error: error.message }
-  
-  await logSensitiveRead(supabase, 'system', 'all', 'viewed_platform_growth')
-  
+
+  await logSensitiveRead(ctx.authClient, 'system', 'all', 'viewed_platform_growth')
+
   return { success: true, data }
 })
 
 export const fetchBusinessesList = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_VIEW, async (params: { searchQuery?: string, filterStatus?: string, filterPlan?: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { data, error } = await supabase.rpc('get_platform_businesses_list', {
+  const { data, error } = await ctx.authClient.rpc('get_platform_businesses_list', {
     search_query: params.searchQuery || null,
     filter_status: params.filterStatus || null,
     filter_plan: params.filterPlan || null
@@ -44,8 +42,7 @@ export const fetchBusinessesList = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_V
 import { logSensitiveRead } from '@/lib/supabase/admin'
 
 export const fetchBusinessDetail = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_VIEW, async (params: { businessId: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { data, error } = await supabase.rpc('get_platform_business_detail', {
+  const { data, error } = await ctx.authClient.rpc('get_platform_business_detail', {
     p_business_id: params.businessId
   })
 
@@ -53,16 +50,14 @@ export const fetchBusinessDetail = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_V
     console.error('Error fetching business detail:', error)
     return { success: false, error: error.message }
   }
-  
-  // Auditable event: Super admin read sensitive business data
-  await logSensitiveRead(supabase, 'business', params.businessId, 'viewed_business_detail')
+
+  await logSensitiveRead(ctx.authClient, 'business', params.businessId, 'viewed_business_detail')
 
   return { success: true, data }
 })
 
 export const suspendBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('suspend_business', {
+  const { error } = await ctx.authClient.rpc('suspend_business', {
     p_business_id: params.businessId,
     p_reason: params.reason
   })
@@ -82,8 +77,7 @@ export const suspendBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES
 })
 
 export const reactivateBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('reactivate_business', {
+  const { error } = await ctx.authClient.rpc('reactivate_business', {
     p_business_id: params.businessId,
     p_reason: params.reason
   })
@@ -103,8 +97,7 @@ export const reactivateBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINES
 })
 
 export const deleteBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('soft_delete_business', {
+  const { error } = await ctx.authClient.rpc('soft_delete_business', {
     p_business_id: params.businessId,
     p_reason: params.reason
   })
@@ -123,8 +116,7 @@ export const deleteBusinessAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_
 })
 
 export const updateBusinessPlanAction = adminAction(PLATFORM_PERMISSIONS.BUSINESSES_MANAGE, async (params: { businessId: string, planId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('admin_update_business_plan', {
+  const { error } = await ctx.authClient.rpc('admin_update_business_plan', {
     p_business_id: params.businessId,
     p_plan_id: params.planId,
     p_reason: params.reason
@@ -155,8 +147,7 @@ export const updateBusinessPlanAction = adminAction(PLATFORM_PERMISSIONS.BUSINES
 })
 
 export const fetchPlatformUsersList = adminAction(PLATFORM_PERMISSIONS.USERS_VIEW, async (params: { searchQuery?: string, filterStatus?: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { data, error } = await supabase.rpc('get_platform_users_list', {
+  const { data, error } = await ctx.authClient.rpc('get_platform_users_list', {
     search_query: params.searchQuery || null,
     filter_status: params.filterStatus || null
   })
@@ -222,8 +213,7 @@ export const fetchPlatformUserDetail = adminAction(PLATFORM_PERMISSIONS.USERS_VI
 })
 
 export const suspendUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('suspend_platform_user', {
+  const { error } = await ctx.authClient.rpc('suspend_platform_user', {
     p_user_id: params.userId,
     p_reason: params.reason
   })
@@ -243,8 +233,7 @@ export const suspendUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, 
 })
 
 export const reactivateUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('reactivate_platform_user', {
+  const { error } = await ctx.authClient.rpc('reactivate_platform_user', {
     p_user_id: params.userId,
     p_reason: params.reason
   })
@@ -264,8 +253,7 @@ export const reactivateUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAG
 })
 
 export const forceLogoutUserAction = adminAction(PLATFORM_PERMISSIONS.USERS_MANAGE, async (params: { userId: string, reason: string }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('force_logout_user', {
+  const { error } = await ctx.authClient.rpc('force_logout_user', {
     p_user_id: params.userId,
     p_reason: params.reason
   })
@@ -300,8 +288,7 @@ export const updatePlanAction = adminAction(PLATFORM_PERMISSIONS.PLANS_MANAGE, a
   priceMonthly?: number
   isActive?: boolean
 }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('update_plan_pricing', {
+  const { error } = await ctx.authClient.rpc('update_plan_pricing', {
     p_plan_id: params.planId,
     p_name: params.name ?? null,
     p_description: params.description ?? null,
@@ -328,8 +315,7 @@ export const updatePlanFeatureAction = adminAction(PLATFORM_PERMISSIONS.PLANS_MA
   limitValue: number | null
   hardLimit?: number | null
 }, ctx: any) => {
-  const supabase = ctx.adminClient
-  const { error } = await supabase.rpc('upsert_plan_feature', {
+  const { error } = await ctx.authClient.rpc('upsert_plan_feature', {
     p_plan_id: params.planId,
     p_feature_key: params.featureKey,
     p_limit_value: params.limitValue,

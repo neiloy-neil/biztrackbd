@@ -12,6 +12,8 @@ import {
   GitBranch,
   Building2,
   ChevronRight,
+  Truck,
+  Globe
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -22,6 +24,20 @@ import { AccountsClient } from '@/domains/settings/components/AccountsClient'
 import { BranchClient } from '@/domains/settings/components/BranchClient'
 
 const navTiles = [
+  {
+    href: '/app/settings/storefront',
+    label: 'অনলাইন স্টোর',
+    sub: 'Online Store',
+    icon: Globe,
+    color: 'blue',
+  },
+  {
+    href: '/app/settings/integrations',
+    label: 'কুরিয়ার',
+    sub: 'Courier Setup',
+    icon: Truck,
+    color: 'orange',
+  },
   {
     href: '/app/settings/business',
     label: 'ব্যবসার প্রোফাইল',

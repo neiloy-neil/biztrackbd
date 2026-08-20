@@ -55,7 +55,7 @@ export default function NewPartyPage() {
     })
 
     if (res.success) {
-      router.push(`/parties/${(res.data as any).id}`)
+      router.push(`/app/parties/${(res.data as any).id}`)
     } else {
       setError(res.error || 'পার্টি তৈরি করা যায়নি')
       setLoading(false)

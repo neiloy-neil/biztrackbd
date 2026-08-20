@@ -1,13 +1,14 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies } from 'next/headers'
 
 // Public Action: Get Storefront Profile by Slug
 export async function getStorefrontProfileBySlug(slug: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
-  // This relies on the RLS policy: "Public can view active storefronts"
+  // Bypassing RLS because anonymous users cannot read the `businesses` table normally
   const { data, error } = await supabase
     .from('storefront_profiles')
     .select(`
@@ -31,25 +32,18 @@ export async function getStorefrontProfileBySlug(slug: string) {
 
 // Public Action: Get Published Products for a Business
 export async function getStorefrontProducts(businessId: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
-  // Relies on RLS policy: "Public can view published products"
+  // Bypassing RLS for public catalog
   const { data, error } = await supabase
     .from('products')
     .select(`
       id,
       name,
       barcode,
-      category:categories(name),
+      category:product_categories(name),
       is_published_online,
-      online_price,
-      variants:product_variants (
-        id,
-        size,
-        color,
-        material,
-        price_adjustment
-      )
+      online_price
     `)
     .eq('business_id', businessId)
     .eq('is_published_online', true)

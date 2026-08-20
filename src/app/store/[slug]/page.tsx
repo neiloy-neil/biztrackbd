@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { QuickAddToCartButton } from './components/QuickAddToCartButton'
 
 export default async function StorefrontPage({
   params,
@@ -58,9 +59,7 @@ export default async function StorefrontPage({
                       <div className="font-bold text-lg" style={{ color: profile.theme_color }}>
                         ৳{Number(product.online_price || 0).toLocaleString('en-IN')}
                       </div>
-                      <Button size="sm" variant="secondary" className="px-3" style={{ backgroundColor: `${profile.theme_color}15`, color: profile.theme_color }}>
-                        View
-                      </Button>
+                      <QuickAddToCartButton product={product} themeColor={profile.theme_color} />
                     </div>
                   </CardContent>
                 </Card>

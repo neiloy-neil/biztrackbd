@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ShoppingBag } from 'lucide-react'
+import { ProductDetailClient } from './components/ProductDetailClient'
 
 export default async function ProductDetailPage({
   params,
@@ -35,42 +36,7 @@ export default async function ProductDetailPage({
             <span className="text-8xl">🛍️</span>
           </div>
 
-          {/* Product Info */}
-          <div className="space-y-6 flex flex-col">
-            <div className="space-y-2">
-              <div className="text-sm font-semibold tracking-wider text-slate-500 uppercase">
-                {product.category?.[0]?.name || 'Uncategorized'}
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
-              <p className="text-slate-500">SKU/Barcode: {product.barcode}</p>
-            </div>
-
-            <div className="text-4xl font-extrabold tracking-tight" style={{ color: profile.theme_color }}>
-              ৳{Number(product.online_price || 0).toLocaleString('en-IN')}
-            </div>
-
-            {/* Variants Selection (if any) */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-medium text-slate-900">Available Options</h3>
-                <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v: any) => (
-                    <div key={v.id} className="px-4 py-2 rounded-md border text-sm font-medium cursor-pointer hover:border-slate-400 transition-colors bg-slate-50">
-                      {v.size && `Size: ${v.size} `}
-                      {v.color && `Color: ${v.color}`}
-                      {v.price_adjustment > 0 && ` (+৳${v.price_adjustment})`}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-auto pt-8">
-              <Button size="lg" className="w-full text-base font-semibold h-14" style={{ backgroundColor: profile.theme_color }}>
-                <ShoppingBag className="mr-2 h-5 w-5" /> Add to Cart
-              </Button>
-            </div>
-          </div>
+          <ProductDetailClient product={product} themeColor={profile.theme_color} />
         </div>
       </div>
     </div>

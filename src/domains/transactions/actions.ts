@@ -138,6 +138,7 @@ export const getAccounts = authAction(async (data: void, ctx) => {
     .from('accounts')
     .select('id, name, type')
     .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
 
   if (error) return { success: false, error: error.message }
   return { success: true, data: accounts }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, use } from 'react'
+import { useState, use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { submitOnlineOrder } from '@/domains/storefront/actions'
 import { toast } from 'sonner'
+import { useCartStore } from '@/domains/storefront/store/cart'
 
 export default function CheckoutPage({
   params,
@@ -19,6 +20,7 @@ export default function CheckoutPage({
   const { slug } = use(params)
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -26,26 +28,78 @@ export default function CheckoutPage({
     address: ''
   })
 
-  // For V1 UI mockup, we will simulate an empty cart or a mock item.
-  // Real implementation will use a client-side CartProvider (localStorage/zustand)
-  const cartTotal = 1500
+  // Wait for client mount to ensure Zustand persist has hydrated
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const cartItems = useCartStore((state) => state.items)
+  const items = useCartStore((state) => state.items)
+  const cartTotal = items.reduce((total, item) => total + (item.unit_price * item.quantity), 0)
+  const clearCart = useCartStore((state) => state.clearCart)
+
+  // Real implementation of delivery fee (For V1 we can assume fixed or passed as prop, here mocked from UI)
   const deliveryFee = 60
   const grandTotal = cartTotal + deliveryFee
 
+  if (!mounted) {
+    return <div className="max-w-4xl mx-auto p-12 text-center text-slate-500 animate-pulse">Loading checkout...</div>
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty')
+      return
+    }
+
     setLoading(true)
 
     try {
-      // In a real flow, businessId is fetched from context, and items from the CartProvider
-      // For this step, we will mock the submission since we are just building the skeleton UI
-      setTimeout(() => {
-        setSuccess(true)
-        setLoading(false)
-        toast.success('Order placed successfully!')
-      }, 1500)
-    } catch (err) {
-      toast.error('Failed to place order')
+      // businessId should ideally come from a context or profile fetch.
+      // But for this client component, we will rely on the slug resolving to a profile on the server action.
+      // We'll update the server action to accept `slug` instead of `businessId` in a real app,
+      // but to match the current action signature, let's just assume we get businessId from a prop or fetch it.
+      // Wait, submitOnlineOrder requires businessId. 
+      // I'll need to fetch the profile first or pass businessId as a prop.
+      // Since page.tsx is a client component relying on a server param, we should actually fetch the profile client-side or pass it down.
+      // Wait, we can modify the server action to take `slug` and look up the businessId itself!
+      // Let's call a new action `submitOnlineOrderBySlug`.
+      // For now, I'll use a mocked businessId or just the existing `submitOnlineOrder` if we pass the businessId.
+      
+      const res = await fetch(`/api/storefront/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          customerName: formData.name,
+          customerPhone: formData.phone,
+          deliveryAddress: formData.address,
+          items: cartItems.map(i => ({
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            subtotal: i.unit_price * i.quantity
+          })),
+          totalAmount: grandTotal,
+          deliveryFee: deliveryFee
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to place order')
+      }
+
+      clearCart()
+      setSuccess(true)
+      toast.success('Order placed successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to place order')
+    } finally {
       setLoading(false)
     }
   }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { getProducts, toggleProductOnlineStatus } from '@/domains/inventory/actions'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { ArrowRight, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowRight, Loader2, ChevronDown, ChevronRight, Globe } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
 import { useInView } from 'react-intersection-observer'
 
@@ -80,7 +80,14 @@ export function ProductList({ initialProducts, search, lowStockOnly }: { initial
                         <div className="w-4 h-4" />
                       )}
                       <div>
-                        <div className="font-medium text-slate-900">{p.name}</div>
+                        <div className="font-medium text-slate-900 flex items-center gap-2">
+                          {p.name}
+                          {p.is_published_online && (
+                            <span title="Published Online" className="flex items-center text-blue-500">
+                              <Globe className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-slate-500">{p.category?.name || 'Category-less'}</div>
                       </div>
                     </div>
@@ -105,8 +112,15 @@ export function ProductList({ initialProducts, search, lowStockOnly }: { initial
                         checked={!!p.is_published_online} 
                         onCheckedChange={async (checked) => {
                           const originalProducts = [...products];
-                          setProducts(products.map(prod => prod.id === p.id ? { ...prod, is_published_online: checked } : prod));
-                          const res = await toggleProductOnlineStatus({ productId: p.id, is_published: checked });
+                          // Default the online_price to the regular price if it's being turned on and it doesn't have one
+                          const onlinePrice = checked ? (p.online_price || p.price) : p.online_price;
+                          
+                          setProducts(products.map(prod => prod.id === p.id ? { ...prod, is_published_online: checked, online_price: onlinePrice } : prod));
+                          const res = await toggleProductOnlineStatus({ 
+                            productId: p.id, 
+                            is_published: checked,
+                            online_price: onlinePrice
+                          });
                           if (!res.success) {
                             setProducts(originalProducts);
                           }

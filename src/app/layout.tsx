@@ -59,8 +59,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background">
+      <body className="min-h-full flex flex-col bg-background" suppressHydrationWarning>
         <QueryProvider>
           <OfflineSyncProvider>
             {/* Top Navigation */}

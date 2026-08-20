@@ -124,9 +124,7 @@ export const getProducts = authAction(async (data: {
     .select(`
       *,
       category:product_categories(name),
-      supplier:parties(name),
-      variants:product_variants(*),
-      lots:inventory_lots(*)
+      supplier:parties(name)
     `)
     .eq('business_id', ctx.businessId)
     .is('deleted_at', null)
@@ -149,7 +147,7 @@ export const getProducts = authAction(async (data: {
   if (data.lowStockOnly) {
     query = supabase
       .from('products')
-      .select(`*, category:product_categories(name), supplier:parties(name), variants:product_variants(*), lots:inventory_lots(*)`)
+      .select(`*, category:product_categories(name), supplier:parties(name)`)
       .eq('business_id', ctx.businessId)
       .is('deleted_at', null)
       .order('name')
@@ -279,13 +277,29 @@ export const getInventoryLots = authAction(async (data: { productId: string, var
   return { success: true, data: lots }
 })
 
-export const toggleProductOnlineStatus = authAction(async (data: { productId: string, is_published: boolean }) => {
+export const toggleProductOnlineStatus = requirePermission(PERMISSIONS.INVENTORY_MANAGE, authAction(async (data: { 
+  productId: string, 
+  is_published: boolean,
+  online_price?: number 
+}, ctx) => {
   const supabase = await createClient()
+
+  const updatePayload: any = { 
+    is_published_online: data.is_published 
+  }
+
+  if (data.is_published && data.online_price !== undefined) {
+    updatePayload.online_price = data.online_price
+  }
+
   const { error } = await supabase
     .from('products')
-    .update({ is_published_online: data.is_published })
+    .update(updatePayload)
     .eq('id', data.productId)
+    .eq('business_id', ctx.businessId) // security check
   
   if (error) return { success: false, error: error.message }
+  
+  revalidatePath('/app/inventory')
   return { success: true, data: null }
-})
+}))

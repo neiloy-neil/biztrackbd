@@ -13,7 +13,10 @@ import {
   Building2,
   ChevronRight,
   Truck,
-  Globe
+  Globe,
+  ShoppingCart,
+  Bot,
+  UserCircle
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -24,6 +27,13 @@ import { AccountsClient } from '@/domains/settings/components/AccountsClient'
 import { BranchClient } from '@/domains/settings/components/BranchClient'
 
 const navTiles = [
+  {
+    href: '/app/orders',
+    label: 'অনলাইন অর্ডার',
+    sub: 'Online Orders',
+    icon: ShoppingCart,
+    color: 'emerald',
+  },
   {
     href: '/app/settings/storefront',
     label: 'অনলাইন স্টোর',
@@ -79,6 +89,20 @@ const navTiles = [
     sub: 'Support',
     icon: HeadphonesIcon,
     color: 'slate',
+  },
+  {
+    href: '/app/settings/profile',
+    label: 'আমার প্রোফাইল',
+    sub: 'User Profile',
+    icon: UserCircle,
+    color: 'slate',
+  },
+  {
+    href: '/app/assistant',
+    label: 'এআই অ্যাসিস্ট্যান্ট',
+    sub: 'AI Assistant',
+    icon: Bot,
+    color: 'purple',
   },
 ] as const
 

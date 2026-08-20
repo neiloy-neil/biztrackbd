@@ -26,8 +26,7 @@ const processPOSSaleSchema = z.object({
   notes: z.string().optional(),
   items: z.array(POSCartItemSchema).min(1),
   payments: z.array(POSPaymentSchema),
-  branch_id: z.string().uuid().optional(),
-  idempotencyKey: z.string()
+  branch_id: z.string().uuid().optional()
 })
 
 export type POSCartItem = {

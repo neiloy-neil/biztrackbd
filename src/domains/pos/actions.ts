@@ -201,33 +201,29 @@ export const processPOSSale = idempotentAction(async (rawData: {
   }
 
   // 2. Post-RPC VAT Assignment
-  if (isVatEnabled) {
-    // Find the invoice that was created for this transaction
-    const { data: tx } = await supabase.from('transactions').select('invoice_id').eq('id', transactionId).single()
-    if (tx && tx.invoice_id) {
-      // Generate the Tax Invoice Number via RPC
-      const { data: taxInvoiceNum } = await supabase.rpc('generate_tax_invoice_number', { p_business_id: ctx.businessId })
-      
-      await supabase.from('invoices').update({
-        tax_invoice_number: taxInvoiceNum,
-        mushak_reference: 'Mushak-6.3',
-        pricing_model_applied: defaultPricingModel,
-        total_taxable_value: totalTaxableValue,
-        total_vat_amount: totalVatAmount
-      }).eq('id', tx.invoice_id)
+  if (isVatEnabled && transactionId) {
+    // Generate the Tax Invoice Number via RPC
+    const { data: taxInvoiceNum } = await supabase.rpc('generate_tax_invoice_number', { p_business_id: ctx.businessId })
+    
+    await supabase.from('transactions').update({
+      tax_invoice_number: taxInvoiceNum,
+      mushak_reference: 'Mushak-6.3',
+      pricing_model_applied: defaultPricingModel,
+      total_taxable_value: totalTaxableValue,
+      total_vat_amount: totalVatAmount
+    }).eq('id', transactionId)
 
-      // Get the invoice items to attach line-level vat details
-      const { data: invItems } = await supabase.from('invoice_items').select('id, product_id').eq('invoice_id', tx.invoice_id)
-      if (invItems) {
-        for (const it of invItems) {
-          const enriched = enrichedItems.find(e => e.product_id === it.product_id)
-          if (enriched) {
-            await supabase.from('invoice_items').update({
-              taxable_value: enriched.taxable_value,
-              vat_rate: enriched.vat_rate,
-              vat_amount: enriched.vat_amount
-            }).eq('id', it.id)
-          }
+    // Get the transaction items to attach line-level vat details
+    const { data: invItems } = await supabase.from('transaction_items').select('id, product_id').eq('transaction_id', transactionId)
+    if (invItems) {
+      for (const it of invItems) {
+        const enriched = enrichedItems.find(e => e.product_id === it.product_id)
+        if (enriched) {
+          await supabase.from('transaction_items').update({
+            taxable_value: enriched.taxable_value,
+            vat_rate: enriched.vat_rate,
+            vat_amount: enriched.vat_amount
+          }).eq('id', it.id)
         }
       }
     }

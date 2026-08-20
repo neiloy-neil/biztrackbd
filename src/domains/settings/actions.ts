@@ -318,6 +318,50 @@ export const removeStaff = requirePermission(PERMISSIONS.STAFF_MANAGE, authActio
   return { success: true, data: result }
 }))
 
+
+export const getBusinessTaxProfile = authAction(async (data: void, ctx) => {
+  const supabase = await createClient()
+  const { data: taxProfile, error } = await supabase
+    .from('business_tax_profiles')
+    .select('*')
+    .eq('business_id', ctx.businessId)
+    .maybeSingle()
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: taxProfile }
+})
+
+export const updateBusinessTaxProfile = authAction(async (
+  data: {
+    vat_enabled: boolean
+    tin?: string
+    bin?: string
+    default_vat_rate?: number
+    default_pricing_model?: 'inclusive' | 'exclusive'
+  },
+  ctx
+) => {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('business_tax_profiles')
+    .upsert({
+      business_id: ctx.businessId,
+      vat_enabled: data.vat_enabled,
+      tin: data.tin || null,
+      bin: data.bin || null,
+      default_vat_rate: data.default_vat_rate || 0,
+      default_pricing_model: data.default_pricing_model || 'exclusive',
+      updated_at: new Date().toISOString()
+    })
+  
+  if (error) return { success: false, error: error.message }
+  
+  // Revalidate relevant paths
+  revalidatePath('/app/settings/business')
+  revalidatePath('/app/pos')
+  
+  return { success: true, data: null }
+})
+
 // ── Branches ──────────────────────────────────────────────────────────────────
 
 export const getBranches = authAction(async (data: void, ctx) => {

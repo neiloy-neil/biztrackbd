@@ -20,7 +20,8 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
   image_url?: string,
   tracking_type?: 'simple' | 'variant' | 'batch' | 'serialized',
   variants?: { sku: string, name_override: string, price_override: number, attributes: any }[],
-  lots?: { identifier: string, expiry_date: string, variant_id?: string }[]
+  lots?: { identifier: string, expiry_date: string, variant_id?: string }[],
+  tax_meta?: { is_taxable: boolean, hs_code?: string, vat_rate?: number }
 }, ctx) => {
   const supabase = await createClient()
 
@@ -53,6 +54,11 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
   // Update tracking_type if not simple
   if (data.tracking_type && data.tracking_type !== 'simple') {
     await supabase.from('products').update({ tracking_type: data.tracking_type }).eq('id', productId)
+  }
+
+  // Update tax_meta if provided
+  if (data.tax_meta) {
+    await supabase.from('products').update({ tax_meta: data.tax_meta }).eq('id', productId)
   }
 
   // Insert Variants
@@ -175,6 +181,8 @@ export const getProductHistory = authAction(async (data: { productId: string }, 
 // PERM-01: recordMovement requires inventory.manage permission
 export const recordMovement = requirePermission(PERMISSIONS.INVENTORY_MANAGE, authAction(async (data: {
   product_id: string,
+  variant_id?: string,
+  lot_id?: string,
   type: 'in' | 'out' | 'adjustment',
   quantity: number,
   reason?: string
@@ -210,6 +218,8 @@ export const recordMovement = requirePermission(PERMISSIONS.INVENTORY_MANAGE, au
       business_id: ctx.businessId,
       branch_id: ctx.branchId,
       product_id: data.product_id,
+      variant_id: data.variant_id || null,
+      lot_id: data.lot_id || null,
       type: data.type,
       quantity: data.quantity,
       reason: data.reason,
@@ -253,4 +263,15 @@ export const getInventoryLots = authAction(async (data: { productId: string, var
   
   if (error) return { success: false, error: error.message }
   return { success: true, data: lots }
+})
+
+export const toggleProductOnlineStatus = authAction(async (data: { productId: string, is_published: boolean }) => {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('products')
+    .update({ is_published_online: data.is_published })
+    .eq('id', data.productId)
+  
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: null }
 })

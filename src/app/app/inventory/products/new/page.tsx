@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createProduct } from '@/domains/inventory/actions'
+import { getBusinessTaxProfile } from '@/domains/settings/actions'
+import { useEffect } from 'react'
+import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +18,10 @@ export default function NewProductPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const [taxEnabled, setTaxEnabled] = useState(false)
+  const [taxData, setTaxData] = useState({ is_taxable: true, hs_code: '', vat_rate: 0 })
+  useEffect(() => { getBusinessTaxProfile().then(r => { if (r?.success && r.data?.vat_enabled) { setTaxEnabled(true); setTaxData(d => ({...d, vat_rate: r.data.default_vat_rate || 0})) } }) }, [])
+  
   const [formData, setFormData] = useState({
     name: '', sku: '', barcode: '', price: '', cost: '', unit: 'pcs', min_stock: '0', initial_stock: '0', tracking_type: 'simple'
   })
@@ -44,7 +51,8 @@ export default function NewProductPage() {
       initial_stock: Number(formData.initial_stock),
       tracking_type: formData.tracking_type as any,
       variants: v,
-      lots: lots
+      lots: lots,
+      tax_meta: taxEnabled ? taxData : undefined
     })
 
     if (res.success) {
@@ -87,6 +95,21 @@ export default function NewProductPage() {
               </div>
             )}
         </CardContent></Card>
+
+        {taxEnabled && (
+          <Card className="border-none shadow-sm"><CardContent className="p-6 space-y-4">
+             <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg flex items-center gap-2">VAT / Tax Config</h3>
+                <Switch checked={taxData.is_taxable} onCheckedChange={c => setTaxData(prev => ({...prev, is_taxable: c}))} />
+             </div>
+             {taxData.is_taxable && (
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2"><Label>HS Code</Label><Input value={taxData.hs_code} onChange={e => setTaxData(prev => ({...prev, hs_code: e.target.value}))} placeholder="e.g. 1234.56.78" /></div>
+                 <div className="space-y-2"><Label>Specific VAT Rate (%)</Label><Input type="number" min="0" value={taxData.vat_rate} onChange={e => setTaxData(prev => ({...prev, vat_rate: Number(e.target.value)}))} /></div>
+               </div>
+             )}
+          </CardContent></Card>
+        )}
 
         {formData.tracking_type === 'variant' && (
            <Card className="border-none shadow-sm"><CardContent className="p-6 space-y-4">

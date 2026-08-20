@@ -22,10 +22,13 @@ export default async function POSPage() {
     .eq('id', businessId)
     .single()
 
+  // Fetch Tax Profile
+  const { data: taxProfile } = await supabase.from('business_tax_profiles').select('*').eq('business_id', businessId).single()
+
   // Fetch Products
   const { data: products } = await supabase
     .from('products')
-    .select('*')
+    .select('*, variants:product_variants(*), lots:inventory_lots(*)')
     .eq('business_id', businessId)
     .is('deleted_at', null)
     .order('name')
@@ -63,6 +66,7 @@ export default async function POSPage() {
           businessName={business?.name || 'BizTrack BD'}
           businessPhone={business?.phone || ''}
           businessAddress={[business?.address, business?.district].filter(Boolean).join(', ')}
+          taxProfile={taxProfile || null}
         />
       </Suspense>
     </div>

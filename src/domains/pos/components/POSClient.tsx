@@ -40,6 +40,7 @@ export default function POSClient({
   businessName = 'BizTrack BD',
   businessPhone = '',
   businessAddress = '',
+  taxProfile,
 }: {
   initialProducts: Product[]
   accounts: Account[]
@@ -48,6 +49,7 @@ export default function POSClient({
   businessName?: string
   businessPhone?: string
   businessAddress?: string
+  taxProfile?: any
 }) {
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -83,7 +85,27 @@ export default function POSClient({
   }, [search, initialProducts])
 
   const cartSubtotal = cart.reduce((sum, item) => sum + item.subtotal, 0)
-  const cartTotal = Math.max(0, cartSubtotal - discount)
+  
+  let totalVatAmount = 0
+  let isVatEnabled = taxProfile?.vat_enabled === true
+  let pricingModel = taxProfile?.default_pricing_model || 'exclusive'
+  let defaultVatRate = Number(taxProfile?.default_vat_rate || 0)
+
+  if (isVatEnabled) {
+    cart.forEach(item => {
+      const isTaxable = item.product.tax_meta?.is_taxable ?? true
+      const vatRate = isTaxable ? Number(item.product.tax_meta?.vat_rate ?? defaultVatRate) : 0
+      if (vatRate > 0) {
+        if (pricingModel === 'exclusive') {
+          totalVatAmount += item.subtotal * (vatRate / 100)
+        } else {
+          totalVatAmount += item.subtotal - (item.subtotal / (1 + (vatRate / 100)))
+        }
+      }
+    })
+  }
+
+  const cartTotal = Math.max(0, (pricingModel === 'exclusive' ? cartSubtotal + totalVatAmount : cartSubtotal) - discount)
   const isDueMode = paymentMode === 'due'
   const paidAmount = isDueMode ? 0 : (Number(paymentAmount) || 0)
   const dueAmount = Math.max(0, cartTotal - paidAmount)

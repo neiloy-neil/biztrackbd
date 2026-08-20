@@ -8,20 +8,15 @@ export const getMushak63Report = authAction(async (data: { invoiceId: string }, 
 
   // 1. Get invoice and transaction details
   const { data: invoice, error: invErr } = await supabase
-    .from('invoices')
-    .select(`
-      *,
-      transactions!inner (
-        id, party_id, business_id, branch_id, transaction_date
-      )
-    `)
+    .from('transactions')
+    .select('*')
     .eq('id', data.invoiceId)
     .single()
 
   if (invErr || !invoice) throw new Error('Invoice not found')
 
   // Verify business scope
-  if (invoice.transactions.business_id !== ctx.businessId) {
+  if (invoice.business_id !== ctx.businessId) {
     throw new Error('Unauthorized')
   }
 
@@ -38,11 +33,11 @@ export const getMushak63Report = authAction(async (data: { invoiceId: string }, 
 
   // 3. Get Customer Tax Profile
   let customerTaxInfo = null
-  if (invoice.transactions.party_id) {
+  if (invoice.party_id) {
     const { data: party } = await supabase
       .from('parties')
       .select('name, address, tax_meta')
-      .eq('id', invoice.transactions.party_id)
+      .eq('id', invoice.party_id)
       .single()
     if (party) {
       customerTaxInfo = {
@@ -56,12 +51,12 @@ export const getMushak63Report = authAction(async (data: { invoiceId: string }, 
 
   // 4. Get Invoice Items with Product HS Code
   const { data: items } = await supabase
-    .from('invoice_items')
+    .from('transaction_items')
     .select(`
       *,
       products ( name, tax_meta )
     `)
-    .eq('invoice_id', data.invoiceId)
+    .eq('transaction_id', data.invoiceId)
 
   const formattedItems = (items || []).map((it: any) => ({
     description: it.products?.name,
@@ -79,7 +74,7 @@ export const getMushak63Report = authAction(async (data: { invoiceId: string }, 
     data: {
       mushak_reference: invoice.mushak_reference || 'Mushak-6.3',
       tax_invoice_number: invoice.tax_invoice_number,
-      issue_date: invoice.transactions.transaction_date,
+      issue_date: invoice.transaction_date,
       business_info: {
         tin: taxProfile.tin,
         bin: taxProfile.bin

@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getProducts } from '@/domains/inventory/actions'
+import React, { useState, useEffect } from 'react'
+import { getProducts, toggleProductOnlineStatus } from '@/domains/inventory/actions'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { ArrowRight, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { AppLink as Link } from '@/components/AppLink'
 import { useInView } from 'react-intersection-observer'
 
 export function ProductList({ initialProducts, search, lowStockOnly }: { initialProducts: any[], search?: string, lowStockOnly?: boolean }) {
   const [products, setProducts] = useState<any[]>(initialProducts)
   const [loading, setLoading] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [hasMore, setHasMore] = useState(initialProducts.length === 50 && !lowStockOnly)
 
   const { ref, inView } = useInView()
@@ -51,6 +53,7 @@ export function ProductList({ initialProducts, search, lowStockOnly }: { initial
             <th className="py-3 px-4 font-medium">SKU / বারকোড</th>
             <th className="py-3 px-4 font-medium text-right">স্টক</th>
             <th className="py-3 px-4 font-medium text-right">বিক্রয় মূল্য</th>
+            <th className="py-3 px-4 font-medium text-center">অনলাইন</th>
             <th className="py-3 px-4"></th>
           </tr>
         </thead>
@@ -60,39 +63,91 @@ export function ProductList({ initialProducts, search, lowStockOnly }: { initial
             const min = Number(p.min_stock)
             const isLow = stock <= min
 
+            const hasChildren = p.tracking_type !== 'simple' && ((p.variants && p.variants.length > 0) || (p.lots && p.lots.length > 0))
+            const isExpanded = !!expandedRows[p.id]
+
             return (
-              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                <td className="py-3 px-4">
-                  <div className="font-medium text-slate-900">{p.name}</div>
-                  <div className="text-xs text-slate-500">{p.category?.name || 'Category-less'}</div>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="text-sm text-slate-600">{p.sku || '-'}</div>
-                  <div className="text-xs text-slate-400">{p.barcode}</div>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <div className={`text-base font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}`}>
-                    {stock} {p.unit}
-                  </div>
-                  {isLow && <span className="text-[10px] uppercase font-bold text-rose-500 bg-rose-100 px-1.5 py-0.5 rounded">Low</span>}
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <div className="font-medium text-slate-900">{formatCurrency(p.price)}</div>
-                  <div className="text-xs text-slate-500">কেনা: {formatCurrency(p.cost)}</div>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <Link href={`/inventory/products/${p.id}`}>
-                    <Button variant="ghost" size="icon" className="hover:bg-slate-200 text-slate-400 hover:text-slate-700">
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </td>
-              </tr>
+              <React.Fragment key={p.id}>
+                <tr 
+                  className={`hover:bg-slate-50 transition-colors ${hasChildren ? 'cursor-pointer' : ''}`}
+                  onClick={() => { if (hasChildren) setExpandedRows(prev => ({...prev, [p.id]: !prev[p.id]})) }}
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      {hasChildren ? (
+                        isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <div className="w-4 h-4" />
+                      )}
+                      <div>
+                        <div className="font-medium text-slate-900">{p.name}</div>
+                        <div className="text-xs text-slate-500">{p.category?.name || 'Category-less'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="text-sm text-slate-600">{p.sku || '-'}</div>
+                    <div className="text-xs text-slate-400">{p.barcode}</div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className={`text-base font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}`}>
+                      {stock} {p.unit}
+                    </div>
+                    {isLow && <span className="text-[10px] uppercase font-bold text-rose-500 bg-rose-100 px-1.5 py-0.5 rounded">Low</span>}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="font-medium text-slate-900">{formatCurrency(p.price)}</div>
+                    <div className="text-xs text-slate-500">কেনা: {formatCurrency(p.cost)}</div>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex justify-center items-center">
+                      <Switch 
+                        checked={!!p.is_published_online} 
+                        onCheckedChange={async (checked) => {
+                          const originalProducts = [...products];
+                          setProducts(products.map(prod => prod.id === p.id ? { ...prod, is_published_online: checked } : prod));
+                          const res = await toggleProductOnlineStatus({ productId: p.id, is_published: checked });
+                          if (!res.success) {
+                            setProducts(originalProducts);
+                          }
+                        }}
+                      />
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <Link href={`/inventory/products/${p.id}`}>
+                      <Button variant="ghost" size="icon" className="hover:bg-slate-200 text-slate-400 hover:text-slate-700">
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </td>
+                </tr>
+                {isExpanded && p.variants?.map((v: any) => (
+                  <tr key={v.id} className="bg-slate-50/50 text-sm border-t border-slate-100">
+                    <td className="py-2 px-4 pl-10 text-slate-700">└ {v.name_override}</td>
+                    <td className="py-2 px-4 text-slate-500">{v.sku || '-'}</td>
+                    <td className="py-2 px-4 text-right font-medium">-</td>
+                    <td className="py-2 px-4 text-right text-slate-700 font-medium">{formatCurrency(v.price_override || p.price)}</td>
+                    <td className="py-2 px-4"></td>
+                    <td className="py-2 px-4"></td>
+                  </tr>
+                ))}
+                {isExpanded && p.lots?.map((l: any) => (
+                  <tr key={l.id} className="bg-slate-50/50 text-sm border-t border-slate-100">
+                    <td className="py-2 px-4 pl-10 text-slate-700">└ {l.identifier}</td>
+                    <td className="py-2 px-4 text-slate-500">{l.expiry_date ? `Exp: ${l.expiry_date}` : '-'}</td>
+                    <td className="py-2 px-4 text-right font-medium">-</td>
+                    <td className="py-2 px-4 text-right text-slate-700 font-medium">-</td>
+                    <td className="py-2 px-4"></td>
+                    <td className="py-2 px-4"></td>
+                  </tr>
+                ))}
+              </React.Fragment>
             )
           })}
           {products.length === 0 && (
             <tr>
-              <td colSpan={5} className="py-12 text-center text-slate-500">
+              <td colSpan={6} className="py-12 text-center text-slate-500">
                 কোনো প্রোডাক্ট পাওয়া যায়নি।
               </td>
             </tr>

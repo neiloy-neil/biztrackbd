@@ -20,7 +20,9 @@ export default function AdjustInventoryPage() {
     product_id: '',
     type: 'adjustment', // 'in', 'out', 'adjustment'
     quantity: '',
-    reason: ''
+    reason: '',
+    variant_id: '',
+    lot_id: ''
   })
 
   useEffect(() => {
@@ -30,8 +32,16 @@ export default function AdjustInventoryPage() {
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    if (name === 'product_id') {
+      setFormData(prev => ({ ...prev, product_id: value, variant_id: '', lot_id: '' }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
   }
+  
+  const selectedProduct = products.find(p => p.id === formData.product_id)
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,6 +57,8 @@ export default function AdjustInventoryPage() {
 
     const res = await recordMovement({
       product_id: formData.product_id,
+      variant_id: formData.variant_id || undefined,
+      lot_id: formData.lot_id || undefined,
       type: formData.type as any,
       quantity: qty,
       reason: formData.reason

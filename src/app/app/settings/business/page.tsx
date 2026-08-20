@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { getBusinessProfile, updateBusinessProfile } from '@/domains/settings/actions'
+import { getBusinessProfile, updateBusinessProfile, getBusinessTaxProfile, updateBusinessTaxProfile } from '@/domains/settings/actions'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/lib/supabase/client'
 
 const BUSINESS_TYPES = [
@@ -51,16 +52,35 @@ const empty: BusinessData = {
   business_type: '', trade_license: '', logo_url: '',
 }
 
+const emptyTax = {
+  vat_enabled: false,
+  tin: '',
+  bin: '',
+  default_vat_rate: 0,
+  default_pricing_model: 'exclusive'
+}
+
 export default function BusinessSettingsPage() {
   const [form, setForm] = useState<BusinessData>(empty)
+  const [taxForm, setTaxForm] = useState(emptyTax)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    getBusinessProfile()
-      .then(res => {
+    Promise.all([getBusinessProfile(), getBusinessTaxProfile()])
+      .then(([res, taxRes]) => {
+        if (taxRes?.success && taxRes.data) {
+          const t = taxRes.data as any
+          setTaxForm({
+            vat_enabled: t.vat_enabled ?? false,
+            tin: t.tin ?? '',
+            bin: t.bin ?? '',
+            default_vat_rate: t.default_vat_rate ?? 0,
+            default_pricing_model: t.default_pricing_model ?? 'exclusive'
+          })
+        }
         if (res?.success && res.data) {
           const d = res.data as any
           setForm({
@@ -79,6 +99,9 @@ export default function BusinessSettingsPage() {
 
   const set = (key: keyof BusinessData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const setTax = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setTaxForm(f => ({ ...f, [key]: e.target.value }))
+  const toggleVat = (checked: boolean) => setTaxForm(f => ({ ...f, vat_enabled: checked }))
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -119,6 +142,7 @@ export default function BusinessSettingsPage() {
     if (!form.name.trim()) return
     setSaving(true)
     const res = await updateBusinessProfile(form)
+    const taxRes = await updateBusinessTaxProfile(taxForm as any)
     setSaving(false)
     if (res?.success) {
       setSaved(true)
@@ -243,6 +267,45 @@ export default function BusinessSettingsPage() {
               <Input value={form.trade_license} onChange={set('trade_license')} placeholder="TL-XXXXXXXX" />
             </div>
           </CardContent>
+        </Card>
+
+        {/* Tax & Compliance */}
+        <Card className="border-none shadow-sm bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-800 flex items-center justify-between">
+              ভ্যাট ও কমপ্লায়েন্স (Tax & Compliance)
+              <Switch checked={taxForm.vat_enabled} onCheckedChange={toggleVat} />
+            </CardTitle>
+          </CardHeader>
+          {taxForm.vat_enabled && (
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>TIN (Tax Identification Number)</Label>
+                  <Input value={taxForm.tin} onChange={setTax('tin')} placeholder="TIN..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>BIN (Business Identification Number)</Label>
+                  <Input value={taxForm.bin} onChange={setTax('bin')} placeholder="BIN (For Mushak 6.3)..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>ডিফল্ট ভ্যাট হার (%)</Label>
+                  <Input type="number" value={taxForm.default_vat_rate} onChange={setTax('default_vat_rate')} placeholder="e.g. 5 or 15" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>ভ্যাট প্রাইসিং মডেল</Label>
+                  <select
+                    value={taxForm.default_pricing_model}
+                    onChange={setTax('default_pricing_model')}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="exclusive">Exclusive (Add VAT on top of price)</option>
+                    <option value="inclusive">Inclusive (VAT is included in price)</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {saved && (

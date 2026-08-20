@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { authAction, requirePermission } from '@/lib/actions/safe-action'
 import { PERMISSIONS } from '@/lib/auth/rbac'
 import { revalidatePath } from 'next/cache'
+import { getLimit } from '@/domains/saas/entitlements'
 
 // PERM-03: createProduct requires inventory.manage permission
 export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, authAction(async (data: {
@@ -27,6 +28,19 @@ export const createProduct = requirePermission(PERMISSIONS.INVENTORY_MANAGE, aut
 
   if (!data.name || data.price < 0 || data.cost < 0) {
     return { success: false, error: 'Invalid product details.' }
+  }
+
+  // Enforce usage limits for products
+  const productLimit = await getLimit(ctx.businessId, 'max_products')
+  if (productLimit !== null && productLimit !== undefined && productLimit !== 0) {
+    const { count } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', ctx.businessId)
+      
+    if (count !== null && count >= productLimit) {
+      return { success: false, error: `Limit reached: You have reached the maximum number of products (${productLimit}) for your current plan.` }
+    }
   }
 
   // First, create the core product via RPC (which defaults tracking_type to simple)

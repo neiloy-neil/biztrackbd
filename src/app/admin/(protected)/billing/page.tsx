@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { SubscriptionActions } from '@/domains/admin/components/SubscriptionActions'
 
 export default async function AdminBillingPage() {
   const supabase = await createAdminAuthClient()
@@ -61,26 +62,16 @@ export default async function AdminBillingPage() {
     return acc
   }, {})
 
-  // Calculate Metrics
-  let mrr = 0
-  let activeCount = 0
-  let pastDueCount = 0
-  let cancelledCount = 0
+  const { data: metrics } = await supabase
+    .from('admin_mrr_metrics')
+    .select('*')
+    .single()
 
-  subs?.forEach((sub: any) => {
-    if (sub.status === 'active') {
-      activeCount++
-      if (sub.plans?.price_monthly) {
-        mrr += Number(sub.plans.price_monthly)
-      }
-    } else if (sub.status === 'past_due') {
-      pastDueCount++
-    } else if (sub.status === 'cancelled') {
-      cancelledCount++
-    }
-  })
-
-  const arr = mrr * 12
+  const mrr = metrics?.total_mrr || 0
+  const arr = metrics?.total_arr || 0
+  const activeCount = metrics?.active_subscriptions || 0
+  const pastDueCount = metrics?.past_due_subscriptions || 0
+  const cancelledCount = metrics?.canceled_subscriptions || 0
   const arpu = activeCount > 0 ? (mrr / activeCount).toFixed(2) : 0
 
   return (
@@ -178,8 +169,8 @@ export default async function AdminBillingPage() {
                         </TableCell>
                         <TableCell>৳{sub.plans?.price_monthly || 0}</TableCell>
                         <TableCell>{new Date(sub.current_period_end).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right text-xs text-indigo-600">
-                          <button className="hover:underline">Manage</button>
+                        <TableCell className="text-right">
+                          <SubscriptionActions subscriptionId={sub.id} status={sub.status} />
                         </TableCell>
                       </TableRow>
                     ))}

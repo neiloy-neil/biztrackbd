@@ -22,13 +22,13 @@ export const refundInvoiceAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANA
   if (opError) throw new Error(opError.message)
 
   // Mark invoice as refunded
-  await ctx.adminClient.from('invoices').update({ status: 'Refunded', updated_at: new Date().toISOString() }).eq('id', invoiceId)
+  await ctx.adminClient.from('invoices').update({ status: 'refunded', updated_at: new Date().toISOString() }).eq('id', invoiceId)
 
   await logPlatformAction({
     action: 'refund_invoice',
     target_type: 'invoice',
     target_id: invoiceId,
-    new_state: { status: 'Refunded', refund_amount: amount }
+    new_state: { status: 'refunded', refund_amount: amount }
   })
 
   revalidatePath('/admin/billing')

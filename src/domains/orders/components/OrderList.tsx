@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createConsignment } from '@/domains/orders/courier-actions'
+import { createConsignment, syncShipmentStatus } from '@/domains/orders/courier-actions'
 import { reconcileOrder } from '@/domains/orders/reconciliation-actions'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
@@ -55,6 +55,25 @@ export function OrderList({ initialOrders, activeCouriers = [], accounts = [] }:
         router.refresh()
       } else {
         toast.error(res.error || 'Failed to create shipment')
+      }
+    } catch (e) {
+      toast.error('An unexpected error occurred')
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const handleSyncStatus = async (orderId: string) => {
+    setLoadingId(orderId)
+    try {
+      const res = await syncShipmentStatus(orderId)
+      if (res.success) {
+        toast.success(`Status synced: ${res.status}`)
+        if (res.status === 'delivered') {
+          setOrders(orders.map(o => o.id === orderId ? { ...o, state: 'delivered' } : o))
+        }
+      } else {
+        toast.error(res.error || 'Failed to sync status')
       }
     } catch (e) {
       toast.error('An unexpected error occurred')
@@ -194,6 +213,11 @@ export function OrderList({ initialOrders, activeCouriers = [], accounts = [] }:
                         <a href={shipment.courier_tracking_link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center">
                           Track <ExternalLink className="h-3 w-3 ml-1" />
                         </a>
+                      )}
+                      {order.state === 'shipped' && (
+                         <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 mt-1 text-slate-500" disabled={loadingId === order.id} onClick={() => handleSyncStatus(order.id)}>
+                            Sync Status
+                         </Button>
                       )}
                     </div>
                   ) : order.state === 'pending' || order.state === 'processing' ? (

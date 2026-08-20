@@ -40,25 +40,25 @@ CREATE OR REPLACE VIEW public.admin_mrr_metrics AS
 SELECT 
     COALESCE(SUM(
         CASE 
-            WHEN s.billing_cycle = ''monthly'' THEN p.price_monthly
-            WHEN s.billing_cycle = ''annual'' THEN p.price_annual / 12.0
+            WHEN s.billing_cycle = 'monthly' THEN p.price_monthly
+            WHEN s.billing_cycle = 'annual' THEN p.price_annual / 12.0
             ELSE 0
         END
     ), 0) AS total_mrr,
     COALESCE(SUM(
         CASE 
-            WHEN s.billing_cycle = ''monthly'' THEN p.price_monthly * 12.0
-            WHEN s.billing_cycle = ''annual'' THEN p.price_annual
+            WHEN s.billing_cycle = 'monthly' THEN p.price_monthly * 12.0
+            WHEN s.billing_cycle = 'annual' THEN p.price_annual
             ELSE 0
         END
     ), 0) AS total_arr,
-    COUNT(s.id) FILTER (WHERE s.status = ''active'') AS active_subscriptions,
-    COUNT(s.id) FILTER (WHERE s.status = ''trialing'') AS trialing_subscriptions,
-    COUNT(s.id) FILTER (WHERE s.status = ''past_due'') AS past_due_subscriptions,
-    COUNT(s.id) FILTER (WHERE s.status = ''canceled'') AS canceled_subscriptions
+    COUNT(s.id) FILTER (WHERE s.status = 'active') AS active_subscriptions,
+    COUNT(s.id) FILTER (WHERE s.status = 'trialing') AS trialing_subscriptions,
+    COUNT(s.id) FILTER (WHERE s.status = 'past_due') AS past_due_subscriptions,
+    COUNT(s.id) FILTER (WHERE s.status = 'canceled') AS canceled_subscriptions
 FROM public.subscriptions s
 JOIN public.plans p ON s.plan_id = p.id
-WHERE s.status IN (''active'', ''past_due'', ''trialing'');
+WHERE s.status IN ('active', 'past_due', 'trialing');
 
 -- Secure the view
 GRANT SELECT ON public.admin_mrr_metrics TO authenticated, anon;

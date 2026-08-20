@@ -129,3 +129,25 @@ export const changePlanAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANAGE,
   revalidatePath('/admin/billing')
   return { success: true, data: null }
 })
+
+export const toggleCancelAtPeriodEndAction = adminAction(PLATFORM_PERMISSIONS.BILLING_MANAGE, async (params: { subscriptionId: string, cancelAtPeriodEnd: boolean }, ctx: any) => {
+  const { subscriptionId, cancelAtPeriodEnd } = params
+
+  const { error } = await ctx.adminClient
+    .from('subscriptions')
+    .update({ cancel_at_period_end: cancelAtPeriodEnd, updated_at: new Date().toISOString() })
+    .eq('id', subscriptionId)
+
+  if (error) throw new Error(error.message)
+
+  await logPlatformAction({
+    action: 'toggle_cancel_at_period_end',
+    target_type: 'subscription',
+    target_id: subscriptionId,
+    new_state: { cancel_at_period_end: cancelAtPeriodEnd }
+  })
+
+  revalidatePath('/admin/billing')
+  return { success: true, data: null }
+})
+

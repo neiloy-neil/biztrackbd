@@ -100,3 +100,89 @@ CREATE POLICY "Owners can manage business integrations"
 -- 4. Modify shipments table to store courier IDs
 ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS courier_consignment_id text;
 ALTER TABLE public.shipments ADD COLUMN IF NOT EXISTS courier_tracking_link text;
+
+
+-- ==========================================
+-- 3. HARDENED SUBSCRIPTION RENEWALS CRON
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.process_subscription_renewals()
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public, pg_temp
+  AS 
+  DECLARE
+    v_sub record;
+    v_plan record;
+    v_amount numeric;
+    v_count_invoices integer := 0;
+    v_count_past_due integer := 0;
+    v_count_unpaid integer := 0;
+    v_count_cancelled integer := 0;
+  BEGIN
+    -- 1. Create renewal invoices for active subscriptions expiring in <= 7 days
+    FOR v_sub IN 
+      SELECT s.* 
+      FROM public.subscriptions s
+      WHERE s.status = 'active'
+        AND s.cancel_at_period_end = false
+        AND s.current_period_end <= now() + interval '7 days'
+        AND NOT EXISTS (
+          SELECT 1 FROM public.invoices i 
+          WHERE i.subscription_id = s.id 
+            AND i.status IN ('draft', 'open')
+        )
+    LOOP
+      SELECT * INTO v_plan FROM public.plans WHERE id = v_sub.plan_id;
+      
+      IF v_sub.billing_cycle = 'annual' THEN
+        v_amount := v_plan.price_annual;
+      ELSE
+        v_amount := v_plan.price_monthly;
+      END IF;
+
+      INSERT INTO public.invoices (
+        business_id, subscription_id, amount_due, status, due_date
+      ) VALUES (
+        v_sub.business_id, v_sub.id, v_amount, 'open', v_sub.current_period_end
+      );
+      
+      v_count_invoices := v_count_invoices + 1;
+    END LOOP;
+
+    -- 1b. Transition to cancelled if cancel_at_period_end is true and period ended
+    WITH updated AS (
+      UPDATE public.subscriptions
+      SET status = 'cancelled', updated_at = now()
+      WHERE status = 'active' AND cancel_at_period_end = true AND current_period_end < now()
+      RETURNING id
+    )
+    SELECT count(*) INTO v_count_cancelled FROM updated;
+
+    -- 2. Transition active -> past_due for lapsed subscriptions (that are not cancelling)
+    WITH updated AS (
+      UPDATE public.subscriptions
+      SET status = 'past_due', updated_at = now()
+      WHERE status = 'active' AND cancel_at_period_end = false AND current_period_end < now()
+      RETURNING id
+    )
+    SELECT count(*) INTO v_count_past_due FROM updated;
+
+    -- 3. Transition past_due -> unpaid (suspend) after 7-day grace period
+    WITH updated AS (
+      UPDATE public.subscriptions
+      SET status = 'unpaid', updated_at = now()
+      WHERE status = 'past_due' AND current_period_end < now() - interval '7 days'
+      RETURNING id
+    )
+    SELECT count(*) INTO v_count_unpaid FROM updated;
+
+    RETURN jsonb_build_object(
+      'ok', true, 
+      'invoices_created', v_count_invoices,
+      'marked_cancelled', v_count_cancelled,
+      'marked_past_due', v_count_past_due,
+      'marked_unpaid', v_count_unpaid
+    );
+  END;
+  ;

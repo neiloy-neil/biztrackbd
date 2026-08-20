@@ -38,7 +38,7 @@ export default async function AdminBillingPage() {
   const { data: subs } = await supabase
     .from('subscriptions')
     .select(`
-      id, status, current_period_end, plan_id,
+      id, status, current_period_end, plan_id, cancel_at_period_end,
       businesses ( id, name ),
       plans ( id, name, price_monthly )
     `)
@@ -170,7 +170,13 @@ export default async function AdminBillingPage() {
                         <TableCell>৳{sub.plans?.price_monthly || 0}</TableCell>
                         <TableCell>{new Date(sub.current_period_end).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <SubscriptionActions subscriptionId={sub.id} status={sub.status} />
+                          <SubscriptionActions 
+                            subscriptionId={sub.id} 
+                            status={sub.status} 
+                            cancelAtPeriodEnd={sub.cancel_at_period_end}
+                            planId={sub.plan_id}
+                            plans={plans || []}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}

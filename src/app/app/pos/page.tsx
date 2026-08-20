@@ -28,7 +28,7 @@ export default async function POSPage() {
   // Fetch Products
   const { data: products } = await supabase
     .from('products')
-    .select('*, variants:product_variants(*), lots:inventory_lots(*)')
+    .select('*')
     .eq('business_id', businessId)
     .is('deleted_at', null)
     .order('name')
